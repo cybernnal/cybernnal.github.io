@@ -1848,7 +1848,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    mainContent.addEventListener('mousemove', (e) => {
+    mainContent.addEventListener('pointermove', (e) => {
         if (isPanning) {
             const dx = e.clientX - panStartX;
             const dy = e.clientY - panStartY;
