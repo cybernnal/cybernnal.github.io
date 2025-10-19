@@ -19,12 +19,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let trackCount = 0;
     let tempo = 1;
     let zoomLevel = 25; // Default zoom level
-    let trackHeight = 30; // Default track height
+    let trackHeight = 15; // Default track height
     let masterVolume = 1;
 
     let selectedNotes = [];
     let clipboard = null;
     let isCut = false;
+
+    let recentCustomColors = [];
+
+    function saveRecentColors() {
+        localStorage.setItem('musicMakerRecentColors', JSON.stringify(recentCustomColors));
+    }
+
+    function loadRecentColors() {
+        const saved = localStorage.getItem('musicMakerRecentColors');
+        if (saved) {
+            recentCustomColors = JSON.parse(saved);
+        }
+    }
+    loadRecentColors();
 
 
 
@@ -216,34 +230,21 @@ document.addEventListener('DOMContentLoaded', () => {
         saveState();
     }
 
-    function updateTrackHeaderStyle(track) {
-        const col = track.elem.querySelector('.instrument-col');
-        if (!col) return;
 
-        if (trackHeight < 18) { // Tiny tier
-            col.classList.add('size-tiny');
-            col.classList.remove('size-medium', 'size-small');
-        } else if (trackHeight < 24) { // Small tier
-            col.classList.remove('size-tiny');
-            col.classList.add('size-small');
-            col.classList.remove('size-medium');
-        } else if (trackHeight < 32) { // Medium tier
-            col.classList.remove('size-tiny', 'size-small');
-            col.classList.add('size-medium');
-        } else { // Large/Default tier
-            col.classList.remove('size-tiny', 'size-small', 'size-medium');
-        }
-    }
 
     function updateTrackHeight() {
-        const slider = document.getElementById('trackHeightSlider');
-        trackHeight = parseInt(slider.value, 10);
-
+        
         document.querySelectorAll('#track-headers-table tr, #timeline-table tr').forEach(tr => {
             tr.style.height = `${trackHeight}px`;
         });
 
-        tracks.forEach(updateTrackHeaderStyle);
+        const verticalPadding = Math.max(0, (trackHeight - 16) / 2);
+        document.querySelectorAll('#track-headers-table th, #track-headers-table td, #timeline-table th, #timeline-table td').forEach(td => {
+            td.style.paddingTop = `${verticalPadding}px`;
+            td.style.paddingBottom = `${verticalPadding}px`;
+        });
+
+
     }
 
     document.getElementById('addTrackBtn').addEventListener('click', () => addTrack());
@@ -502,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTrackLabels();
         updateTrackStyles();
         updateTrackColors();
-        updateTrackHeaderStyle(track);
+
         if (!suppressSave) saveState();
         return track;
     }
@@ -632,7 +633,65 @@ document.addEventListener('DOMContentLoaded', () => {
         track.input = input;
         track.label = label;
 
-        dupBtn.addEventListener('click', () => addTrack(track));
+        dupBtn.addEventListener('click', () => {
+            const sourceTrack = track;
+            let parentTrack = sourceTrack;
+            if (sourceTrack.isLinked) {
+                parentTrack = tracks.find(t => !t.isLinked && t.notes === sourceTrack.notes);
+            }
+            const parentIndex = tracks.indexOf(parentTrack);
+
+            const children = [];
+            for (let i = parentIndex + 1; i < tracks.length; i++) {
+                const nextTrack = tracks[i];
+                if (nextTrack.isLinked && nextTrack.notes === parentTrack.notes) {
+                    children.push(nextTrack);
+                } else {
+                    break;
+                }
+            }
+
+            const groupToDuplicate = [parentTrack, ...children];
+            const lastTrackOfGroup = groupToDuplicate[groupToDuplicate.length - 1];
+            const insertionIndex = tracks.indexOf(lastTrackOfGroup) + 1;
+
+            const newTracks = [];
+            let newParentTrack = null;
+
+            groupToDuplicate.forEach((trackToDup, i) => {
+                let newTrack;
+                if (i === 0) {
+                    newTrack = addTrack(trackToDup, false, true);
+                    newParentTrack = newTrack;
+                } else {
+                    newTrack = addTrack(trackToDup, true, true);
+                    newTrack.isLinked = true;
+                    newTrack.notes = newParentTrack.notes;
+                    newTrack.groupId = newParentTrack.groupId;
+                    newTrack.notes.forEach(note => createNoteElement(newTrack, note));
+                }
+                newTracks.push(newTrack);
+            });
+
+            // Move the new tracks from the end to the correct position
+            const addedTracks = tracks.splice(tracks.length - newTracks.length, newTracks.length);
+            tracks.splice(insertionIndex, 0, ...addedTracks);
+
+            // Re-render tables
+            const headersTbody = document.querySelector('#track-headers-table tbody');
+            const timelineTbody = document.querySelector('#timeline-table tbody');
+            headersTbody.innerHTML = '';
+            timelineTbody.innerHTML = '';
+            tracks.forEach(t => {
+                headersTbody.appendChild(t.elem);
+                timelineTbody.appendChild(t.timelineElem);
+            });
+
+            updateTrackLabels();
+            updateTrackStyles();
+            updateTrackColors();
+            saveState();
+        });
         delBtn.addEventListener('click', () => {
             if (!track.isLinked) {
                 const myIndex = tracks.indexOf(track);
@@ -677,6 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
             newTrack.isLinked = true;
             newTrack.color = track.color;
             newTrack.notes = track.notes;
+            newTrack.notes.forEach(note => createNoteElement(newTrack, note));
 
             updateLinkButtons(track);
             updateLinkButtons(newTrack);
@@ -842,29 +902,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorPaletteBtn = document.getElementById('color-palette-btn');
     const colorPaletteDropdown = document.getElementById('color-palette-dropdown');
 
-    colorPaletteBtn.addEventListener('click', () => {
-        colorPaletteDropdown.style.display = colorPaletteDropdown.style.display === 'block' ? 'none' : 'block';
+    function renderRecentColors() {
+        const container = document.getElementById('recent-colors-grid');
+        container.innerHTML = '';
+        
+        const totalRecentSwatches = 9;
+        for (let i = 0; i < totalRecentSwatches; i++) {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            
+            if (i < recentCustomColors.length) {
+                const color = recentCustomColors[i];
+                swatch.dataset.color = color;
+                swatch.style.backgroundColor = color;
+            } else {
+                // Default white swatch
+                swatch.dataset.color = '#ffffff';
+                swatch.style.backgroundColor = '#ffffff';
+            }
+            
+            container.appendChild(swatch);
+        }
+    }
+
+    colorPaletteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        renderRecentColors();
+        colorPaletteDropdown.classList.toggle('open');
     });
 
     colorPaletteDropdown.addEventListener('click', (e) => {
         if (e.target.classList.contains('color-swatch')) {
             const color = e.target.dataset.color;
             changeTrackColors(color);
-            colorPaletteDropdown.style.display = 'none';
+            colorPaletteDropdown.classList.remove('open');
         }
     });
 
     document.getElementById('custom-color-btn').addEventListener('click', () => {
         const colorPickerWrapper = document.getElementById('color-picker-wrapper');
-        colorPickerWrapper.style.display = colorPickerWrapper.style.display === 'block' ? 'none' : 'block';
+        colorPickerWrapper.style.display = colorPickerWrapper.style.display === 'flex' ? 'none' : 'flex';
     });
 
     document.getElementById('confirm-color-btn').addEventListener('click', () => {
         const colorPicker = document.getElementById('color-picker');
         const color = colorPicker.value;
         changeTrackColors(color);
-        document.getElementById('color-picker-wrapper').style.display = 'none';
-        colorPaletteDropdown.style.display = 'none';
+
+        if (!recentCustomColors.includes(color)) {
+            recentCustomColors.unshift(color);
+            if (recentCustomColors.length > 9) {
+                recentCustomColors.pop();
+            }
+            saveRecentColors();
+        }
+
+        colorPaletteDropdown.classList.remove('open');
     });
 
     function changeTrackColors(color) {
@@ -958,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('zoomSlider').addEventListener('input', updateZoom);
-    document.getElementById('trackHeightSlider').addEventListener('input', updateTrackHeight);
+
     document.getElementById('masterVolumeSlider').addEventListener('input', (e) => {
         masterVolume = parseFloat(e.target.value);
         saveState();
@@ -969,6 +1062,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentlyDragging = null;
     let draggingGroup = [];
+    let draggingTimelineGroup = [];
     let isDraggingOrResizing = false;
 
     function dragStart(e) {
@@ -992,6 +1086,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // The drag is anchored to the parent
         currentlyDragging = parentTrack.elem;
         draggingGroup = [parentTrack.elem];
+        draggingTimelineGroup = [parentTrack.timelineElem];
 
         // Find all children of that parent
         const startIndex = tracks.indexOf(parentTrack);
@@ -999,6 +1094,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextTrack = tracks[i];
             if (nextTrack.isLinked && nextTrack.notes === parentTrack.notes) {
                 draggingGroup.push(nextTrack.elem);
+                draggingTimelineGroup.push(nextTrack.timelineElem);
             } else {
                 break;
             }
@@ -1016,9 +1112,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function dragOver(e) {
         if (!currentlyDragging) return;
-        const tbody = currentlyDragging.parentElement;
+        const headersTbody = currentlyDragging.parentElement;
+        const timelineTbody = document.querySelector('#timeline-table tbody');
+
         // Find the next row that isn't part of the group we're dragging
-        const allRows = [...tbody.querySelectorAll('tr:not(.dragging)')];
+        const allRows = [...headersTbody.querySelectorAll('tr:not(.dragging)')];
         let nextRow = allRows.find(row => {
             const rowRect = row.getBoundingClientRect();
             return e.clientY < rowRect.top + rowRect.height / 2;
@@ -1037,11 +1135,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Move the entire group
+        // Move the entire header group
         if (nextRow) {
-            draggingGroup.forEach(tr => tbody.insertBefore(tr, nextRow));
+            draggingGroup.forEach(tr => headersTbody.insertBefore(tr, nextRow));
         } else {
-            draggingGroup.forEach(tr => tbody.appendChild(tr));
+            draggingGroup.forEach(tr => headersTbody.appendChild(tr));
+        }
+
+        // Now, move the timeline group
+        const nextTrack = tracks.find(t => t.elem === nextRow);
+        if (nextTrack) {
+            const nextTimelineRow = nextTrack.timelineElem;
+            draggingTimelineGroup.forEach(tr => timelineTbody.insertBefore(tr, nextTimelineRow));
+        } else {
+            draggingTimelineGroup.forEach(tr => timelineTbody.appendChild(tr));
         }
     }
 
@@ -1064,23 +1171,24 @@ document.addEventListener('DOMContentLoaded', () => {
         tracks = newTracks;
 
         // Reorder the timeline table to match the headers table
-        const timelineTbody = document.querySelector('#timeline-table tbody');
-        if (timelineTbody) {
-            tracks.forEach(track => {
-                timelineTbody.appendChild(track.timelineElem);
-            });
-        } else {
-            const newTimelineTbody = document.createElement('tbody');
-            tracks.forEach(track => {
-                newTimelineTbody.appendChild(track.timelineElem);
-            });
-            document.querySelector('#timeline-table').appendChild(newTimelineTbody);
-        }
+        // const timelineTbody = document.querySelector('#timeline-table tbody');
+        // if (timelineTbody) {
+        //     tracks.forEach(track => {
+        //         timelineTbody.appendChild(track.timelineElem);
+        //     });
+        // } else {
+        //     const newTimelineTbody = document.createElement('tbody');
+        //     tracks.forEach(track => {
+        //         newTimelineTbody.appendChild(track.timelineElem);
+        //     });
+        //     document.querySelector('#timeline-table').appendChild(newTimelineTbody);
+        // }
 
         document.removeEventListener('mousemove', dragOver);
         document.removeEventListener('mouseup', dragEnd);
         currentlyDragging = null;
         draggingGroup = [];
+        draggingTimelineGroup = [];
 
         // Update labels to reflect new order
         updateTrackLabels();
@@ -1739,8 +1847,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (e) => {
         document.getElementById('context-menu').style.display = 'none';
+
+        if (!colorPaletteDropdown.contains(e.target) && e.target !== colorPaletteBtn) {
+            colorPaletteDropdown.classList.remove('open');
+        }
     });
 
     let marqueeBox = document.getElementById('marquee-box');
@@ -1882,26 +1994,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     });
 
-    const customTooltip = document.getElementById('custom-tooltip');
-
     function showTooltip(e) {
         const target = e.target;
-        if (target.title) {
-            customTooltip.textContent = target.title;
-            customTooltip.style.display = 'block';
-            customTooltip.style.left = (e.clientX + 15) + 'px';
-            customTooltip.style.top = (e.clientY + 15) + 'px';
+        const title = target.title || target.dataset.title;
+        if (title) {
+            if (target.title) {
+                target.dataset.title = target.title;
+                target.title = '';
+            }
+
+            const tooltip = document.createElement('span');
+            tooltip.className = 'custom-tooltip-new';
+            tooltip.textContent = title;
+
+            const parent = target.parentElement; // .instrument-col
+            parent.appendChild(tooltip);
+
+            const targetRect = target.getBoundingClientRect();
+            const parentRect = parent.getBoundingClientRect();
+            
+            // Position below the button
+            tooltip.style.left = `${targetRect.left - parentRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
+            tooltip.style.top = `${targetRect.top - parentRect.top + targetRect.height + 5}px`;
         }
     }
 
-    function hideTooltip() {
-        customTooltip.style.display = 'none';
+    function hideTooltip(e) {
+        const target = e.target;
+        if (target.dataset.title) {
+            target.title = target.dataset.title;
+        }
+
+        const tooltip = target.parentElement.querySelector('.custom-tooltip-new');
+        if (tooltip) {
+            tooltip.remove();
+        }
     }
 
-    document.addEventListener('mousemove', (e) => {
-        customTooltip.style.left = (e.clientX + 15) + 'px';
-        customTooltip.style.top = (e.clientY + 15) + 'px';
-    });
+
 
     const trackHeadersContainer = document.getElementById('track-headers-container');
     const timelineContainer = document.getElementById('timeline-container');
@@ -1912,6 +2042,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     timelineContainer.addEventListener('scroll', () => {
         trackHeadersContainer.scrollTop = timelineContainer.scrollTop;
+    });
+
+    trackHeadersContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        timelineContainer.scrollTop += e.deltaY;
     });
 
     loadState();
