@@ -1,0 +1,14 @@
+show duration when sliding the duration
+fix new rendering
+reduce tempo text input lengh
+make the play work
+make the grid scale
+add a sticky timeline with time in seconds, calculate scale with temp and duration tempo 1 = 0.05s
+change solo to play this track smth it just start playing the track alone
+instrument name input fix, looks weird
+have a slider across all tracks showing where the play is at, default at start, when play it moves horizontaly as it plays notes, make it slidable only from the top on tthe sticky timeline abve the tracks
+spacing between = and track number too big
+make header static, just change height,  keep tiny mode
+fix height scaling
+review all
+test all features

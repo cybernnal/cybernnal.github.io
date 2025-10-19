@@ -11,43 +11,38 @@ html, body {
   }
   #header {
     padding: 10px;
-    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
   body.dark-mode { background-color: #333; color: #fff; }
   body.dark-mode #header { background-color: #222; border-bottom: 1px solid #444; }
   #main-content {
     flex-grow: 1;
-    overflow: hidden; /* Hide outer scrollbars */
     display: flex;
-    position: relative;
+    overflow-x: auto; /* Single horizontal scrollbar */
   }
 
   #track-headers-container {
-    width: 260px; /* Adjust as needed */
-    overflow: hidden;
-    flex-shrink: 0;
-    padding-bottom: 17px;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: #fff; /* Match body or a specific color */
+  }
+
+  body.dark-mode #track-headers-container {
+    background-color: #333;
   }
 
   #timeline-container {
     flex-grow: 1;
-    overflow: auto;
   }
 
-  #timeline-container::-webkit-scrollbar {
+  .hide-scrollbars::-webkit-scrollbar {
     display: none;
   }
 
-  #timeline-container {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-
-  #track-headers-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  #track-headers-container {
+  .hide-scrollbars {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
@@ -55,6 +50,10 @@ html, body {
   #track-headers-table, #timeline-table {
     border-collapse: collapse;
     width: 100%;
+  }
+
+  #track-headers-table th, #timeline-table th {
+    height: 22px; /* Adjust as needed */
   }
 
   #track-headers-table th, #track-headers-table td,
@@ -347,38 +346,21 @@ html, body {
     gap: 5px;
   }
 
-    #custom-color-btn {
-
-      width: 100%;
-
-      padding: 5px;
-
-      border: none;
-
-      background-color: #f0f0f0;
-
-      cursor: pointer;
-
-    }
-
-  
-
-  /* Hide scrollbar for Chrome, Safari and Opera */
-
-  ::-webkit-scrollbar {
-
-    display: none;
-
+  #custom-color-btn {
+    width: 100%;
+    padding: 5px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
   }
 
-  
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
 
-  /* Hide scrollbar for IE, Edge and Firefox */
-
-  * {
-
-    -ms-overflow-style: none;  /* IE and Edge */
-
-    scrollbar-width: none;  /* Firefox */
-
-  }
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

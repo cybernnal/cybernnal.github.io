@@ -944,21 +944,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function dragOver(e) {
         if (!currentlyDragging) return;
         const headersTbody = currentlyDragging.parentElement;
-        const timelineTbody = document.querySelector('#timeline-table tbody');
 
-        // Find the next row that isn't part of the group we're dragging
         const allRows = [...headersTbody.querySelectorAll('tr:not(.dragging)')];
         let nextRow = allRows.find(row => {
             const rowRect = row.getBoundingClientRect();
             return e.clientY < rowRect.top + rowRect.height / 2;
         });
 
-        // If we are about to drop inside a linked group, find the parent of that group and drop before it.
         if (nextRow) {
             const nextTrack = tracks.find(t => t.elem === nextRow);
             if (nextTrack && nextTrack.isLinked) {
                 const notesRef = nextTrack.notes;
-                // Find the parent of this group.
                 const parentTrack = tracks.find(t => !t.isLinked && t.notes === notesRef);
                 if (parentTrack) {
                     nextRow = parentTrack.elem;
@@ -966,20 +962,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Move the entire header group
         if (nextRow) {
             draggingGroup.forEach(tr => headersTbody.insertBefore(tr, nextRow));
         } else {
             draggingGroup.forEach(tr => headersTbody.appendChild(tr));
-        }
-
-        // Now, move the timeline group
-        const nextTrack = tracks.find(t => t.elem === nextRow);
-        if (nextTrack) {
-            const nextTimelineRow = nextTrack.timelineElem;
-            draggingTimelineGroup.forEach(tr => timelineTbody.insertBefore(tr, nextTimelineRow));
-        } else {
-            draggingTimelineGroup.forEach(tr => timelineTbody.appendChild(tr));
         }
     }
 
@@ -988,7 +974,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.body.classList.remove('dragging');
 
-        // Reset styles for the group
         draggingGroup.forEach(tr => {
             tr.style.opacity = 1;
             tr.classList.remove('dragging');
@@ -996,36 +981,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const headersTbody = document.querySelector('#track-headers-table tbody');
         const newOrderedElems = [...headersTbody.querySelectorAll('tr')];
-        const newTracks = newOrderedElems.map(elem => {
-            return tracks.find(t => t.elem === elem);
-        });
+        const newTracks = newOrderedElems.map(elem => tracks.find(t => t.elem === elem));
         tracks = newTracks;
 
-        // Reorder the timeline table to match the headers table
-        // const timelineTbody = document.querySelector('#timeline-table tbody');
-        // if (timelineTbody) {
-        //     tracks.forEach(track => {
-        //         timelineTbody.appendChild(track.timelineElem);
-        //     });
-        // } else {
-        //     const newTimelineTbody = document.createElement('tbody');
-        //     tracks.forEach(track => {
-        //         newTimelineTbody.appendChild(track.timelineElem);
-        //     });
-        //     document.querySelector('#timeline-table').appendChild(newTimelineTbody);
-        // }
+        const timelineTbody = document.querySelector('#timeline-table tbody');
+        tracks.forEach(track => timelineTbody.appendChild(track.timelineElem));
 
         document.removeEventListener('mousemove', dragOver);
         document.removeEventListener('mouseup', dragEnd);
         currentlyDragging = null;
         draggingGroup = [];
-        draggingTimelineGroup = [];
 
-        // Update labels to reflect new order
         updateTrackLabels();
         updateTrackColors();
         
-        // Use a timeout to reset the flag after the click event has had time to fire and be ignored.
         setTimeout(() => { 
             isDraggingOrResizing = false; 
             saveState();
@@ -1265,22 +1234,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const timelineContainer = document.getElementById('timeline-container');
-    const trackHeadersContainer = document.getElementById('track-headers-container');
-
-    timelineContainer.addEventListener('scroll', () => {
-        if (timelineContainer.scrollTop + timelineContainer.clientHeight >= timelineContainer.scrollHeight) {
-            trackHeadersContainer.scrollTop = trackHeadersContainer.scrollHeight;
-        } else {
-            trackHeadersContainer.scrollTop = timelineContainer.scrollTop;
-        }
-    });
-
-    trackHeadersContainer.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        timelineContainer.scrollTop += e.deltaY;
-    });
-
     const mainContent = document.getElementById('main-content');
 
     let rightMouseDown = false;
@@ -1310,8 +1263,8 @@ document.addEventListener('DOMContentLoaded', () => {
             didPan = true;
             const dx = e.clientX - panStartX;
             const dy = e.clientY - panStartY;
-            timelineContainer.scrollLeft -= dx;
-            timelineContainer.scrollTop -= dy;
+            mainContent.scrollLeft -= dx;
+            mainContent.scrollTop -= dy;
             panStartX = e.clientX;
             panStartY = e.clientY;
         }
