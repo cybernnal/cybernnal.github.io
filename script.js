@@ -1832,24 +1832,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let rightMouseDown = false;
     let isPanning = false;
+    let didPan = false;
     let panStartX, panStartY;
-    let panTimer;
 
     mainContent.addEventListener('mousedown', (e) => {
         if (e.button === 2) { // Right mouse button
             rightMouseDown = true;
             panStartX = e.clientX;
             panStartY = e.clientY;
-
-            panTimer = setTimeout(() => {
-                isPanning = true;
-                mainContent.style.cursor = 'grabbing';
-            }, 50); // 50ms delay to differentiate click from hold
+            didPan = false;
         }
     });
 
     mainContent.addEventListener('pointermove', (e) => {
+        if (rightMouseDown && !isPanning) {
+            const dx = Math.abs(e.clientX - panStartX);
+            const dy = Math.abs(e.clientY - panStartY);
+            if (dx > 5 || dy > 5) {
+                isPanning = true;
+                mainContent.style.cursor = 'grabbing';
+            }
+        }
         if (isPanning) {
+            didPan = true;
             const dx = e.clientX - panStartX;
             const dy = e.clientY - panStartY;
             timelineContainer.scrollLeft -= dx;
@@ -1862,15 +1867,15 @@ document.addEventListener('DOMContentLoaded', () => {
     mainContent.addEventListener('mouseup', (e) => {
         if (e.button === 2) {
             rightMouseDown = false;
-            clearTimeout(panTimer);
+            isPanning = false;
             mainContent.style.cursor = 'grab';
         }
     });
 
     mainContent.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        if (isPanning) {
-            isPanning = false; // Reset here
+        if (didPan) {
+            didPan = false; // reset for next time
         } else {
             showContextMenu(e);
         }
