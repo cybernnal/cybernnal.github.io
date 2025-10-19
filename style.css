@@ -20,11 +20,13 @@
     width: 260px; /* Adjust as needed */
     overflow: hidden;
     flex-shrink: 0;
+    padding-bottom: 50px;
   }
 
   #timeline-container {
     flex-grow: 1;
     overflow: auto;
+    padding-bottom: 50px;
   }
 
   #track-headers-table, #timeline-table {
@@ -35,8 +37,8 @@
   #track-headers-table th, #track-headers-table td,
   #timeline-table th, #timeline-table td {
     border: 1px solid #ccc;
-    padding: 5px;
     box-sizing: border-box;
+    padding: 0;
   }
 
   #track-headers-table th {
@@ -58,7 +60,7 @@
 
   body.dark-mode .timeline-col {
     background-image: linear-gradient(to right, #444 1px, transparent 1px), linear-gradient(to bottom, #444 1px, transparent 1px);
-    border-bottom-color: #555;
+    /* border-bottom-color: #555; */
   }
   .drag-handle { 
     color: #888; 
@@ -81,16 +83,7 @@
     gap: 2px; 
   }
 
-  .custom-tooltip-new {
-    position: absolute;
-    background-color: #333;
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 5px;
-    z-index: 10002;
-    pointer-events: none;
-    white-space: nowrap;
-  }
+
 
   .indented .instrument-col {
       margin-left: 20px;
@@ -149,9 +142,10 @@
   }
   .timeline-col {
     position: relative; 
+    height: 100%; 
     background-image: linear-gradient(to right, #ccc 1px, transparent 1px), linear-gradient(to bottom, #ccc 1px, transparent 1px);
     background-size: 30px 100%, 100% 21px;
-    border-bottom: 2px solid #ccc;
+    /* border-bottom: 2px solid #ccc; */
     box-sizing: border-box;
   }
   body.dark-mode .timeline-col {
@@ -168,6 +162,10 @@
     color: black;
     border-radius: 10px;
   }
+
+
+
+
 
   .note::before, .note::after {
     content: '';
@@ -188,67 +186,13 @@
 
 
 
-  .note.selected {
-    outline: 2px solid yellow;
-    outline-offset: 1px;
-  }
 
-  .note.ghosted {
-    opacity: 0.4;
-  }
 
-  .note.ghost-paste {
-    background-color: #a0a0a0 !important;
-    border-color: #777 !important;
-    opacity: 0.6;
-    pointer-events: none;
-  }
 
-  #marquee-box {
-    position: fixed;
-    border: 1px solid #007bff;
-    background-color: rgba(0, 123, 255, 0.2);
-    display: none;
-    pointer-events: none; /* So it doesn't block mouse events */
-    z-index: 9999;
-  }
 
-  #context-menu {
-    position: fixed;
-    display: none;
-    background-color: #f9f9f9;
-    border: 1px solid #ccc;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    z-index: 10000;
-  }
 
-  body.dark-mode #context-menu {
-    background-color: #444;
-    border-color: #666;
-  }
 
-  body.dark-mode #context-menu ul li {
-    color: #fff;
-  }
 
-  body.dark-mode #context-menu ul li:hover {
-    background-color: #555;
-  }
-
-  #context-menu ul {
-    list-style: none;
-    margin: 0;
-    padding: 5px 0;
-  }
-
-  #context-menu ul li {
-    padding: 8px 15px;
-    cursor: pointer;
-  }
-
-  #context-menu ul li:hover {
-    background-color: #eee;
-  }
 
 
 
