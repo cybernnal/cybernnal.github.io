@@ -26,11 +26,13 @@ html, body {
     width: 260px; /* Adjust as needed */
     overflow: hidden;
     flex-shrink: 0;
+    padding-bottom: 50px;
   }
 
   #timeline-container {
     flex-grow: 1;
     overflow: auto;
+    padding-bottom: 50px;
   }
 
   #track-headers-table, #timeline-table {

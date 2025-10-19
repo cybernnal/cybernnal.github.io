@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     savedTrack.notes.forEach(savedNote => {
                         const note = { start: savedNote.start, duration: savedNote.duration, elements: [], track: trackToProcess };
                         trackToProcess.notes.push(note);
-                        
+                        createNoteElement(trackToProcess, note);
                     });
                 }
 
@@ -1144,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const instrumentNotes = {};
             let currentTime = 0;
-            const parts = content.trim().split(/\r?\n/);
+            const parts = content.trim().split(/\s+/);
 
             if (parts.length === 1 && parts[0] === '') {
                 addTrack();
