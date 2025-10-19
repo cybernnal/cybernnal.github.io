@@ -26,13 +26,30 @@ html, body {
     width: 260px; /* Adjust as needed */
     overflow: hidden;
     flex-shrink: 0;
-    padding-bottom: 50px;
+    padding-bottom: 17px;
   }
 
   #timeline-container {
     flex-grow: 1;
     overflow: auto;
-    padding-bottom: 50px;
+  }
+
+  #timeline-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  #timeline-container {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
+  #track-headers-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  #track-headers-container {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 
   #track-headers-table, #timeline-table {
