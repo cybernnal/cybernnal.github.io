@@ -1646,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showContextMenu(e) {
-        e.preventDefault();
+        
         const contextMenu = document.getElementById('context-menu');
         contextMenu.style.left = `${e.clientX}px`;
         contextMenu.style.top = `${e.clientY}px`;
@@ -1864,7 +1864,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rightMouseDown = false;
             clearTimeout(panTimer);
             if (!isPanning) {
-                showContextMenu(e);
+                
             }
             isPanning = false;
             mainContent.style.cursor = 'grab';
