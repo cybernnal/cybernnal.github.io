@@ -24,7 +24,7 @@ html, body {
 
   #track-headers-container {
     width: 260px; /* Adjust as needed */
-    overflow: hidden;
+    overflow: scroll;
     flex-shrink: 0;
     padding-bottom: 50px;
   }
