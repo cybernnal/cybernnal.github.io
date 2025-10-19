@@ -1844,7 +1844,7 @@ document.addEventListener('DOMContentLoaded', () => {
             panTimer = setTimeout(() => {
                 isPanning = true;
                 mainContent.style.cursor = 'grabbing';
-            }, 200); // 200ms delay to differentiate click from hold
+            }, 50); // 50ms delay to differentiate click from hold
         }
     });
 
