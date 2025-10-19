@@ -1840,15 +1840,18 @@ document.addEventListener('DOMContentLoaded', () => {
             rightMouseDown = true;
             panStartX = e.clientX;
             panStartY = e.clientY;
-
-            panTimer = setTimeout(() => {
-                isPanning = true;
-                mainContent.style.cursor = 'grabbing';
-            }, 200); // 200ms delay to differentiate click from hold
         }
     });
 
     mainContent.addEventListener('mousemove', (e) => {
+        if (rightMouseDown && !isPanning) {
+            const dx = Math.abs(e.clientX - panStartX);
+            const dy = Math.abs(e.clientY - panStartY);
+            if (dx > 5 || dy > 5) {
+                isPanning = true;
+                mainContent.style.cursor = 'grabbing';
+            }
+        }
         if (isPanning) {
             const dx = e.clientX - panStartX;
             const dy = e.clientY - panStartY;
@@ -1862,7 +1865,6 @@ document.addEventListener('DOMContentLoaded', () => {
     mainContent.addEventListener('mouseup', (e) => {
         if (e.button === 2) {
             rightMouseDown = false;
-            clearTimeout(panTimer);
             if (!isPanning) {
                 
             }
@@ -1872,6 +1874,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     mainContent.addEventListener('contextmenu', (e) => {
+        if (isPanning) {
+            e.preventDefault();
+            return false;
+        }
         e.preventDefault();
         if (!isPanning) {
             showContextMenu(e);
