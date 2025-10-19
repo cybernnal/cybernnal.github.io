@@ -1269,7 +1269,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const trackHeadersContainer = document.getElementById('track-headers-container');
 
     timelineContainer.addEventListener('scroll', () => {
-        trackHeadersContainer.scrollTop = timelineContainer.scrollTop;
+        if (timelineContainer.scrollTop + timelineContainer.clientHeight >= timelineContainer.scrollHeight) {
+            trackHeadersContainer.scrollTop = trackHeadersContainer.scrollHeight;
+        } else {
+            trackHeadersContainer.scrollTop = timelineContainer.scrollTop;
+        }
     });
 
     trackHeadersContainer.addEventListener('wheel', (e) => {
