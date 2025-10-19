@@ -1852,8 +1852,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isPanning) {
             const dx = e.clientX - panStartX;
             const dy = e.clientY - panStartY;
-            mainContent.scrollLeft -= dx;
-            mainContent.scrollTop -= dy;
+            timelineContainer.scrollLeft -= dx;
+            timelineContainer.scrollTop -= dy;
             panStartX = e.clientX;
             panStartY = e.clientY;
         }
