@@ -1876,6 +1876,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isPanning) {
             showContextMenu(e);
         }
+        return false;
     });
 
     const customTooltip = document.getElementById('custom-tooltip');
