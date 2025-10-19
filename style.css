@@ -1,0 +1,357 @@
+  #app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  #header {
+    padding: 10px;
+    flex-shrink: 0;
+  }
+  body.dark-mode { background-color: #333; color: #fff; }
+  body.dark-mode #header { background-color: #222; border-bottom: 1px solid #444; }
+  #main-content {
+    flex-grow: 1;
+    overflow: hidden; /* Hide outer scrollbars */
+    display: flex;
+    position: relative;
+  }
+
+  #track-headers-container {
+    width: 300px; /* Adjust as needed */
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  #timeline-container {
+    flex-grow: 1;
+    overflow: auto;
+  }
+
+  #track-headers-table, #timeline-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  #track-headers-table th, #track-headers-table td,
+  #timeline-table th, #timeline-table td {
+    border: 1px solid #ccc;
+    padding: 5px;
+    box-sizing: border-box;
+  }
+
+  #track-headers-table th {
+    background-color: #f2f2f2;
+  }
+
+  body.dark-mode #main-content { background-color: #333; }
+  body.dark-mode #track-headers-table th,
+  body.dark-mode #timeline-table th {
+    background-color: #444;
+    border-color: #555;
+  }
+
+  body.dark-mode #track-headers-table td,
+  body.dark-mode #timeline-table td {
+    border-color: #555;
+    background-color: #222;
+  }
+
+  body.dark-mode .timeline-col {
+    background-image: linear-gradient(to right, #444 1px, transparent 1px), linear-gradient(to bottom, #444 1px, transparent 1px);
+    border-bottom-color: #555;
+  }
+  .instrument-col { display: flex; align-items: center; gap: 5px; }
+  .track-label {
+    flex-basis: 60px;
+    flex-shrink: 0;
+    text-align: right;
+    margin-right: 5px;
+    font-size: 12px;
+    color: #000;
+    white-space: nowrap;
+  }
+  .track-label-input-container { 
+    flex-grow: 1;
+    display: flex; 
+    align-items: center; 
+    gap: 5px; 
+    min-width: 0;
+  }
+
+  .track-label-input-container input {
+    width: 100%;
+  }
+  .timeline-col {
+    position: relative; 
+    background-image: linear-gradient(to right, #ccc 1px, transparent 1px), linear-gradient(to bottom, #ccc 1px, transparent 1px);
+    background-size: 30px 100%, 100% 21px;
+    border-bottom: 2px solid #ccc;
+    box-sizing: border-box;
+  }
+  body.dark-mode .timeline-col {
+    background-image: linear-gradient(to right, #555 1px, transparent 1px), linear-gradient(to bottom, #555 1px, transparent 1px);
+    border-bottom-color: #555;
+  }
+  
+.note {
+    position: absolute; height: 80%;
+    top: 10%;
+    background: lightblue; border: 1px solid blue;
+    box-sizing: border-box; cursor: move;
+    display: flex; align-items: center; justify-content: center;
+    color: black;
+    border-radius: 10px;
+  }
+
+  .note::before, .note::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: ew-resize;
+  }
+
+  .note::before {
+    left: -5px;
+  }
+
+  .note::after {
+    right: -5px;
+  }
+
+
+
+  .note.selected {
+    outline: 2px solid yellow;
+    outline-offset: 1px;
+  }
+
+  .note.ghosted {
+    opacity: 0.4;
+  }
+
+  .note.ghost-paste {
+    background-color: #a0a0a0 !important;
+    border-color: #777 !important;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  #marquee-box {
+    position: absolute;
+    border: 1px solid #007bff;
+    background-color: rgba(0, 123, 255, 0.2);
+    display: none;
+    pointer-events: none; /* So it doesn't block mouse events */
+    z-index: 9999;
+  }
+
+  #context-menu {
+    position: fixed;
+    display: none;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    z-index: 10000;
+  }
+
+  body.dark-mode #context-menu {
+    background-color: #444;
+    border-color: #666;
+  }
+
+  body.dark-mode #context-menu ul li {
+    color: #fff;
+  }
+
+  body.dark-mode #context-menu ul li:hover {
+    background-color: #555;
+  }
+
+  #context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 5px 0;
+  }
+
+  #context-menu ul li {
+    padding: 8px 15px;
+    cursor: pointer;
+  }
+
+  #context-menu ul li:hover {
+    background-color: #eee;
+  }
+
+
+  /* Styles for responsive track controls */
+  .instrument-col.size-medium button,
+  .instrument-col.size-medium input {
+    font-size: 11px;
+    padding: 1px 3px;
+  }
+  .instrument-col.size-medium input[type="color"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .instrument-col.size-small button,
+  .instrument-col.size-small input {
+    font-size: 9px;
+    padding: 0 2px;
+  }
+  .instrument-col.size-small input[type="text"] {
+    width: 60px;
+  }
+  .instrument-col.size-small input[type="color"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-right: 5px;
+    border: 1px solid #000;
+  }
+
+  .color-swatch[data-color="#ffb3c3"] { background-color: #ffb3c3; }
+  .color-swatch[data-color="#c3b3ff"] { background-color: #c3b3ff; }
+  .color-swatch[data-color="#b3ffc3"] { background-color: #b3ffc3; }
+  .color-swatch[data-color="#ffffb3"] { background-color: #ffffb3; }
+
+  .dropdown {
+    position: relative;
+    display: inline-block;
+  }
+
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+  }
+
+  .dropdown-content .color-swatch {
+    margin: 5px;
+  }
+
+  #color-palette-btn {
+    background-color: #ffb3c3;
+  }
+
+
+  .color-swatch[data-color="#ffcbb3"] { background-color: #ffcbb3; }
+  .color-swatch[data-color="#b3e6ff"] { background-color: #b3e6ff; }
+  .color-swatch[data-color="#f0b3ff"] { background-color: #f0b3ff; }
+  .color-swatch[data-color="#b3ffeb"] { background-color: #b3ffeb; }
+  .color-swatch[data-color="#ffb3f0"] { background-color: #ffb3f0; }
+
+  #more-colors-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid #000;
+    margin-left: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #custom-color-container {
+    position: relative;
+  }
+
+  #color-picker-wrapper {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 2;
+    background-color: #f9f9f9;
+    padding: 5px;
+    border: 1px solid #ccc;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  }
+
+  #custom-color-btn {
+    width: 100%;
+    padding: 5px;
+    border: none;
+    background-color: #f0f0f0;
+    cursor: pointer;
+  }
+
+  /* Tiny size for overview */
+  .instrument-col.size-tiny {
+      gap: 4px;
+      align-items: center;
+  }
+  
+  .indented .instrument-col {
+      margin-left: 20px;
+  }
+  
+  .indented {
+      background-color: #f0f0f0;
+  }
+  
+  body.dark-mode .indented {
+  
+      background-color: #2a2a2a;
+  
+  }
+  
+  
+  
+  #custom-tooltip {
+  
+      position: fixed;
+  
+      display: none;
+  
+      background-color: #333;
+  
+      color: #fff;
+  
+      padding: 5px 10px;
+  
+      border-radius: 5px;
+  
+      z-index: 10001;
+  
+      pointer-events: none;
+  
+.instrument-col.size-tiny .link-btn,
+.instrument-col.size-tiny .unlink-btn,
+.instrument-col.size-tiny .dup-btn,
+.instrument-col.size-tiny .del-btn,
+.instrument-col.size-tiny .mute-btn,
+.instrument-col.size-tiny .solo-btn,
+.instrument-col.size-tiny .volume-slider,
+.instrument-col.size-tiny .track-label-input-container input {
+    display: none;
+}
+
+.instrument-col.size-tiny .track-label {
+    font-size: 8px;
+}
+.instrument-col.size-tiny .track-label-input-container input {
+    font-size: 12px;
+    border: none;
+    background: transparent;
+    padding: 0 3px;
+    margin: 0;
+    pointer-events: none;
+    max-width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #000; /* High-contrast black for light mode */
+  }
