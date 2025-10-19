@@ -1848,7 +1848,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rightMouseDown && !isPanning) {
             const dx = Math.abs(e.clientX - panStartX);
             const dy = Math.abs(e.clientY - panStartY);
-            if (dx > 5 || dy > 5) {
+            if (dx > 10 || dy > 10) {
                 isPanning = true;
                 mainContent.style.cursor = 'grabbing';
             }
