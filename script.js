@@ -19,12 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let trackCount = 0;
     let tempo = 1;
     let zoomLevel = 25; // Default zoom level
-    let trackHeight = 15; // Default track height
     let masterVolume = 1;
 
-    let selectedNotes = [];
-    let clipboard = null;
-    let isCut = false;
+
+
+
 
     let recentCustomColors = [];
 
@@ -42,210 +41,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    function clearSelection() {
-        selectedNotes.forEach(noteData => {
-            noteData.elements.forEach(el => el.classList.remove('selected'));
-        });
-        selectedNotes = [];
-    }
 
-    let isPasting = false;
+
+
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-            e.preventDefault();
-            selectedNotes.forEach(noteData => {
-                const parentTrack = tracks.find(t => t.notes.includes(noteData));
-                if (!parentTrack) return;
-                const noteIndex = parentTrack.notes.indexOf(noteData);
-                if (noteIndex > -1) parentTrack.notes.splice(noteIndex, 1);
-                noteData.elements.forEach(el => el.remove());
-            });
-            clearSelection();
-            saveState();
-            return;
-        }
 
-        if (e.ctrlKey || e.metaKey) {
-            switch (e.key.toLowerCase()) {
-                case 'c':
-                    copySelection();
-                    e.preventDefault();
-                    break;
-                case 'x':
-                    copySelection();
-                    isCut = true;
-                    selectedNotes.forEach(n => n.elements.forEach(el => el.classList.add('ghosted')));
-                    e.preventDefault();
-                    break;
-                case 'v':
-                    if (clipboard) {
-                        isPasting = true;
-                        updateGhostNotes();
-                        e.preventDefault();
-                    }
-                    break;
-            }
-        }
     });
 
-    function copySelection() {
-        if (selectedNotes.length === 0) return;
-        tracks.forEach(t => t.notes.forEach(n => n.elements.forEach(el => el.classList.remove('ghosted'))));
-
-        const minStart = Math.min(...selectedNotes.map(n => n.start));
-        const topTrackIndex = Math.min(...selectedNotes.map(n => tracks.indexOf(n.track)));
-
-        clipboard = selectedNotes.map(note => ({
-            duration: note.duration,
-            relativeStart: note.start - minStart,
-            relativeTrackIndex: tracks.indexOf(note.track) - topTrackIndex
-        }));
-        isCut = false;
-    }
-
-    let lastMousePos = { x: 0, y: 0 };
-    document.getElementById('main-content').addEventListener('mousemove', e => {
-        lastMousePos = { x: e.clientX, y: e.clientY };
-        if (isPasting) {
-            updateGhostNotes();
-        }
-    });
-
-    document.body.addEventListener('click', (e) => {
-        if (isPasting) {
-            e.preventDefault();
-            e.stopPropagation();
-            pasteSelection();
-        }
-    }, true);
-
-    function updateGhostNotes() {
-        document.querySelectorAll('.ghost-paste').forEach(g => g.remove());
-
-        const targetElement = document.elementFromPoint(lastMousePos.x, lastMousePos.y);
-        const timelineEl = targetElement ? targetElement.closest('.timeline-col') : null;
-        if (!timelineEl) return;
-
-        const pasteTrack = tracks.find(t => t.timeline === timelineEl);
-        const rect = timelineEl.getBoundingClientRect();
-        const x = lastMousePos.x - rect.left;
-        const pasteStartTime = Math.round((x / stepWidth) * tempo) / tempo;
-
-        clipboard.forEach(clipNote => {
-            const targetTrackIndex = tracks.indexOf(pasteTrack) + clipNote.relativeTrackIndex;
-            if (targetTrackIndex < 0 || targetTrackIndex >= tracks.length) return;
-
-            const targetTrack = tracks[targetTrackIndex];
-            const newStart = pasteStartTime + clipNote.relativeStart;
-
-            const ghostDiv = document.createElement('div');
-            ghostDiv.className = 'note ghost-paste';
-            ghostDiv.style.left = `${newStart * stepWidth}px`;
-            ghostDiv.style.width = `${clipNote.duration * stepWidth}px`;
-            ghostDiv.style.height = `${targetTrack.timeline.clientHeight * 0.8}px`;
-            ghostDiv.style.top = `${targetTrack.timeline.clientHeight * 0.1}px`;
-            
-            targetTrack.timeline.appendChild(ghostDiv);
-        });
-    }
-
-    function pasteSelection() {
-        if (!clipboard || !isPasting) return;
-
-        const targetElement = document.elementFromPoint(lastMousePos.x, lastMousePos.y);
-        const timelineEl = targetElement ? targetElement.closest('.timeline-col') : null;
-
-        isPasting = false;
-        document.querySelectorAll('.ghost-paste').forEach(g => g.remove());
-
-        if (!timelineEl) return;
-
-        const pasteTrack = tracks.find(t => t.timeline === timelineEl);
-        const rect = timelineEl.getBoundingClientRect();
-        const x = lastMousePos.x - rect.left;
-        const pasteStartTime = Math.round((x / stepWidth) * tempo) / tempo;
-
-        let collision = false;
-        const proposedNotes = clipboard.map(clipNote => {
-            const targetTrackIndex = tracks.indexOf(pasteTrack) + clipNote.relativeTrackIndex;
-            if (targetTrackIndex < 0 || targetTrackIndex >= tracks.length) return null;
-            const targetTrack = tracks[targetTrackIndex];
-            const newStart = pasteStartTime + clipNote.relativeStart;
-            return { start: newStart, duration: clipNote.duration, track: targetTrack };
-        }).filter(p => p);
-
-        if (proposedNotes.length !== clipboard.length) return;
-
-        for (const p of proposedNotes) {
-            for (const existing of p.track.notes) {
-                if (proposedNotes.includes(existing)) continue; // Don't check against notes in the current paste group
-
-                if (p.start < existing.start + existing.duration && p.start + p.duration > existing.start) {
-                    collision = true;
-                    break;
-                }
-            }
-            if (collision) break;
-        }
-
-        if (collision) {
-            alert("Cannot paste here, the notes would overlap.");
-            return;
-        }
-
-        if (isCut) {
-            selectedNotes.forEach(noteData => {
-                const parentTrack = tracks.find(t => t.notes.includes(noteData));
-                if (!parentTrack) return;
-                const noteIndex = parentTrack.notes.indexOf(noteData);
-                if (noteIndex > -1) parentTrack.notes.splice(noteIndex, 1);
-                noteData.elements.forEach(el => el.remove());
-            });
-        }
-
-        clearSelection();
-
-        proposedNotes.forEach(noteData => {
-            noteData.elements = [];
-            noteData.track.notes.push(noteData);
-
-            tracks.forEach(tr => {
-                if (tr.notes === noteData.track.notes) {
-                    createNoteElement(tr, noteData);
-                }
-            });
-
-            selectedNotes.push(noteData);
-            noteData.elements.forEach(el => el.classList.add('selected'));
-        });
-
-        if (isCut) {
-            clipboard = null;
-            isCut = false;
-        }
-
-        updateAllTimelineWidths();
-        tracks.forEach(updateLinkButtons);
-        saveState();
-    }
 
 
 
-    function updateTrackHeight() {
-        
-        document.querySelectorAll('#track-headers-table tr, #timeline-table tr').forEach(tr => {
-            tr.style.height = `${trackHeight}px`;
-        });
-
-        const verticalPadding = Math.max(0, (trackHeight - 16) / 2);
-        document.querySelectorAll('#track-headers-table th, #track-headers-table td, #timeline-table th, #timeline-table td').forEach(td => {
-            td.style.paddingTop = `${verticalPadding}px`;
-            td.style.paddingBottom = `${verticalPadding}px`;
-        });
 
 
-    }
+
+
+
+
+
+
+
+
+
 
     document.getElementById('addTrackBtn').addEventListener('click', () => addTrack());
     document.getElementById('exportBtn').addEventListener('click', exportTracks);
@@ -299,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadState() {
-        updateTrackHeight();
         const savedStateJSON = localStorage.getItem('musicMakerState');
 
         if (!savedStateJSON) {
@@ -334,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     trackToProcess.isLinked = true;
                     trackToProcess.notes = parent.notes;
-                    trackToProcess.notes.forEach(note => createNoteElement(trackToProcess, note));
+                    
                 } else {
                     trackToProcess = addTrack(null, false, true);
                     parentTrackMap.set(savedTrack.groupId, trackToProcess);
@@ -342,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     savedTrack.notes.forEach(savedNote => {
                         const note = { start: savedNote.start, duration: savedNote.duration, elements: [], track: trackToProcess };
                         trackToProcess.notes.push(note);
-                        createNoteElement(trackToProcess, note);
+                        
                     });
                 }
 
@@ -496,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sourceTrack && !skipNoteCreation) {
             track.notes.forEach(note => {
                 note.track = track; // Ensure new notes point to the new track
-                createNoteElement(track, note);
+                
             });
         }
 
@@ -591,18 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeSlider.value = 1;
         volumeSlider.className = 'volume-slider';
 
-        linkBtn.addEventListener('mouseover', showTooltip);
-        linkBtn.addEventListener('mouseout', hideTooltip);
-        unlinkBtn.addEventListener('mouseover', showTooltip);
-        unlinkBtn.addEventListener('mouseout', hideTooltip);
-        dupBtn.addEventListener('mouseover', showTooltip);
-        dupBtn.addEventListener('mouseout', hideTooltip);
-        delBtn.addEventListener('mouseover', showTooltip);
-        delBtn.addEventListener('mouseout', hideTooltip);
-        muteBtn.addEventListener('mouseover', showTooltip);
-        muteBtn.addEventListener('mouseout', hideTooltip);
-        soloBtn.addEventListener('mouseover', showTooltip);
-        soloBtn.addEventListener('mouseout', hideTooltip);
+
 
         instrCol.appendChild(trackLabelInputContainer);
         instrCol.appendChild(linkBtn);
@@ -619,13 +424,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let tdTimeline = document.createElement('td');
         let timeline = document.createElement('div');
         timeline.className = 'timeline-col';
-        timeline.style.height = `${trackHeight}px`;
         timeline.style.minWidth = '1000px'; // initial width
         tdTimeline.appendChild(timeline);
         trTimeline.appendChild(tdTimeline);
 
         headersTbody.appendChild(trHeader);
         timelineTbody.appendChild(trTimeline);
+
+        const instrColHeight = instrCol.offsetHeight;
+        timeline.style.height = `${instrColHeight}px`;
 
         track.elem = trHeader; // Keep a reference to the header row for dragging
         track.timelineElem = trTimeline; // Keep a reference to the timeline row
@@ -668,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     newTrack.isLinked = true;
                     newTrack.notes = newParentTrack.notes;
                     newTrack.groupId = newParentTrack.groupId;
-                    newTrack.notes.forEach(note => createNoteElement(newTrack, note));
                 }
                 newTracks.push(newTrack);
             });
@@ -811,9 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateSelectionHandle() {
-        // TODO: Implement selection handle UI update
-    }
+
 
 
 
@@ -830,28 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.addEventListener('mousedown', onMouseDownNote);
         div.addEventListener('dragstart', (e) => { e.preventDefault(); return false; });
 
-        div.addEventListener('click', (e) => {
-            if (isDraggingOrResizing) return;
-            e.stopPropagation(); // Prevent timeline click
 
-            const isSelected = selectedNotes.includes(note);
-
-            if (!e.shiftKey && !isSelected) {
-                clearSelection();
-            }
-
-            if (isSelected && e.shiftKey) {
-                // Deselect if shift-clicking an already selected note
-                const index = selectedNotes.indexOf(note);
-                selectedNotes.splice(index, 1);
-                note.elements.forEach(el => el.classList.remove('selected'));
-            } else if (!isSelected) {
-                // Select the note
-                selectedNotes.push(note);
-                note.elements.forEach(el => el.classList.add('selected'));
-            }
-            updateSelectionHandle();
-        });
 
         tl.appendChild(div);
         note.elements = note.elements || [];
@@ -1063,7 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentlyDragging = null;
     let draggingGroup = [];
     let draggingTimelineGroup = [];
-    let isDraggingOrResizing = false;
+
 
     function dragStart(e) {
         isDraggingOrResizing = true;
@@ -1201,351 +984,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 0);
     }
 
-    let activeNote = null;
-    let activeTrack = null;
-    let initialX = 0;
-    let initialLeft = 0;
-    let initialWidth = 0;
-    let isGroupDrag = false;
 
-    function onMouseDownNote(e) {
-        if (e.button !== 0) return;
 
-        const noteElement = this;
-        const rect = noteElement.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
 
-        if (clickX < 10) {
-            onMouseDownLeftHandle.call(this, e);
-        } else if (clickX > rect.width - 10) {
-            onMouseDownRightHandle.call(this, e);
-        } else {
-            // Allow left-click dragging in both Edit and Select modes.
-            e.preventDefault();
-            isDraggingOrResizing = true;
-            activeNote = this;
-            activeTrack = tracks.find(t => t.timeline === this.parentElement);
-            initialX = e.clientX;
-            initialLeft = this.offsetLeft;
 
-            const noteData = activeNote.noteData;
-            isGroupDrag = selectedNotes.length > 1 && selectedNotes.includes(noteData);
 
-            const notesToPrep = isGroupDrag ? selectedNotes : [noteData];
-            notesToPrep.forEach(note => {
-                note.originalStart = note.start;
-            });
 
-            document.addEventListener('mousemove', onMouseMoveNote);
-            document.addEventListener('mouseup', onMouseUpNote);
-        }
-    }
 
-    function onMouseMoveNote(e) {
-        if (!activeNote) return;
-        e.preventDefault();
 
-        let dx = e.clientX - initialX;
-        let newLeft = initialLeft + dx;
-        let newStart = Math.round(newLeft / stepWidth * tempo) / tempo;
-        if (newStart < 0) newStart = 0;
 
-        const delta = newStart - activeNote.noteData.originalStart;
 
-        const notesToMove = isGroupDrag ? selectedNotes : [activeNote.noteData];
 
-        notesToMove.forEach(note => {
-            const proposedStart = note.originalStart + delta;
-            note.elements.forEach(el => {
-                el.style.left = (proposedStart * stepWidth) + 'px';
-            });
-        });
-    }
-
-    function onMouseUpNote(e) {
-        if (!activeNote) return;
-
-        const dx = e.clientX - initialX;
-        const newLeft = initialLeft + dx;
-        let newStart = Math.round(newLeft / stepWidth * tempo) / tempo;
-        if (newStart < 0) newStart = 0;
-
-        const delta = newStart - activeNote.noteData.originalStart;
-        const notesToMove = isGroupDrag ? selectedNotes : [activeNote.noteData];
-        let collision = false;
-
-        // Collision detection for the entire block
-        for (const movedNote of notesToMove) {
-            const proposedStart = movedNote.originalStart + delta;
-            if (proposedStart < 0) {
-                collision = true;
-                break;
-            }
-            const track = tracks.find(t => t.notes.includes(movedNote));
-            if (!track) continue;
-
-            for (const existingNote of track.notes) {
-                // Only check against notes that are NOT part of the dragged selection
-                if (!notesToMove.includes(existingNote)) {
-                    if (proposedStart < existingNote.start + existingNote.duration && proposedStart + movedNote.duration > existingNote.start) {
-                        collision = true;
-                        break;
-                    }
-                }
-            }
-            if (collision) break;
-        }
-
-        // Finalize positions or revert
-        notesToMove.forEach(note => {
-            if (collision) {
-                // Snap back to original position
-                note.start = note.originalStart;
-            } else {
-                // Commit new position
-                note.start = note.originalStart + delta;
-            }
-            // Update visuals and clean up
-            note.elements.forEach(el => {
-                el.style.left = (note.start * stepWidth) + 'px';
-            });
-            delete note.originalStart;
-        });
-
-        if (!collision) {
-            updateAllTimelineWidths();
-            saveState();
-        }
-
-        document.removeEventListener('mousemove', onMouseMoveNote);
-        document.removeEventListener('mouseup', onMouseUpNote);
-        activeNote = null;
-        activeTrack = null;
-        isGroupDrag = false;
-        setTimeout(() => { 
-            isDraggingOrResizing = false; 
-        }, 0);
-    }
-
-    function onMouseDownLeftHandle(e) {
-        if (e.button !== 0) return;
-        isDraggingOrResizing = true;
-        activeNote = this;
-        activeTrack = tracks.find(t => t.timeline === this.parentElement);
-        initialX = e.clientX;
-        initialLeft = activeNote.offsetLeft;
-        initialWidth = activeNote.offsetWidth;
-        let tooltip = document.getElementById('duration-tooltip');
-        tooltip.style.display = 'block';
-        document.addEventListener('mousemove', onMouseMoveLeftHandle);
-        document.addEventListener('mouseup', onMouseUpLeftHandle);
-    }
-
-    function onMouseMoveLeftHandle(e) {
-        if (!activeNote) return;
-
-        // Auto-expand timeline
-        const timeline = activeTrack.timeline;
-        const timelineRect = timeline.getBoundingClientRect();
-        if (e.clientX > timelineRect.right - 200) {
-            timeline.style.minWidth = (timeline.offsetWidth + window.innerWidth) + 'px';
-        }
-
-        let dx = e.clientX - initialX;
-        let newLeft = initialLeft + dx;
-        let newWidth = initialWidth - dx;
-        let newStart = Math.round(newLeft / (stepWidth / tempo)) / tempo;
-        let newDuration = Math.round(newWidth / (stepWidth / tempo)) / tempo;
-
-        // Find the closest note to the left
-        let maxPrevEnd = -Infinity;
-        for (const n of activeTrack.notes) {
-            if (n !== activeNote.noteData && n.start < activeNote.noteData.start && n.start + n.duration > maxPrevEnd) {
-                maxPrevEnd = n.start + n.duration;
-            }
-        }
-
-        // If we are resizing past the closest note, snap to it.
-        if (newStart < maxPrevEnd) {
-            newStart = maxPrevEnd;
-            newDuration = (activeNote.noteData.start + activeNote.noteData.duration) - newStart;
-            newLeft = newStart * stepWidth;
-            newWidth = newDuration * stepWidth;
-        }
-
-        // Update all linked note elements' positions and widths simultaneously
-        activeNote.noteData.elements.forEach(el => {
-            el.style.left = newLeft + 'px';
-            el.style.width = newWidth + 'px';
-        });
-
-        let tooltip = document.getElementById('duration-tooltip');
-        tooltip.textContent = newDuration.toFixed(2);
-        tooltip.style.left = (e.clientX + 15) + 'px';
-        tooltip.style.top = (e.clientY + 15) + 'px';
-    }
-
-    function onMouseUpLeftHandle(e) {
-        if (!activeNote) return;
-        let newLeft = activeNote.offsetLeft;
-        let newWidth = activeNote.offsetWidth;
-        let newStart = Math.round(newLeft / stepWidth * tempo) / tempo;
-        let newDuration = Math.round(newWidth / stepWidth * tempo) / tempo;
-        if (newStart < 0) newStart = 0;
-        let min_duration = 1/tempo;
-        if (newDuration < min_duration) newDuration = min_duration;
-
-        const originalEnd = activeNote.noteData.start + activeNote.noteData.duration;
-
-        // Collision detection
-        for (let i = 0; i < activeTrack.notes.length; i++) {
-            let n = activeTrack.notes[i];
-            if (n !== activeNote.noteData && newStart < n.start + n.duration && newStart + newDuration > n.start) {
-                // Collision detected, revert to original size and position
-                activeNote.noteData.elements.forEach(el => {
-                    el.style.left = (activeNote.noteData.start * stepWidth) + 'px';
-                    el.style.width = (activeNote.noteData.duration * stepWidth) + 'px';
-                });
-                let tooltip = document.getElementById('duration-tooltip');
-                tooltip.style.display = 'none';
-                document.removeEventListener('mousemove', onMouseMoveLeftHandle);
-                document.removeEventListener('mouseup', onMouseUpLeftHandle);
-                activeNote = null;
-                activeTrack = null;
-                setTimeout(() => { 
-                    isDraggingOrResizing = false; 
-                }, 0);
-                return;
-            }
-        }
-
-        activeNote.noteData.start = newStart;
-        activeNote.noteData.duration = newDuration;
-
-        // Update all linked note elements
-        activeNote.noteData.elements.forEach(el => {
-            el.style.left = (newStart * stepWidth) + 'px';
-            el.style.width = (newDuration * stepWidth) + 'px';
-        });
-
-        // Extend timeline width if needed
-        updateTimelineWidth(activeTrack);
-
-        let tooltip = document.getElementById('duration-tooltip');
-        tooltip.style.display = 'none';
-
-        document.removeEventListener('mousemove', onMouseMoveLeftHandle);
-        document.removeEventListener('mouseup', onMouseUpLeftHandle);
-        activeNote = null;
-        activeTrack = null;
-        setTimeout(() => { 
-            isDraggingOrResizing = false; 
-            saveState();
-        }, 0);
-    }
-
-    function onMouseDownRightHandle(e) {
-        if (e.button !== 0) return;
-        isDraggingOrResizing = true;
-        activeNote = this;
-        activeTrack = tracks.find(t => t.timeline === this.parentElement);
-        initialX = e.clientX;
-        initialWidth = activeNote.offsetWidth;
-        let tooltip = document.getElementById('duration-tooltip');
-        tooltip.style.display = 'block';
-        document.addEventListener('mousemove', onMouseMoveRightHandle);
-        document.addEventListener('mouseup', onMouseUpRightHandle);
-    }
-
-    function onMouseMoveRightHandle(e) {
-        if (!activeNote) return;
-
-        // Auto-expand timeline
-        const timeline = activeTrack.timeline;
-        const timelineRect = timeline.getBoundingClientRect();
-        if (e.clientX > timelineRect.right - 200) {
-            timeline.style.minWidth = (timeline.offsetWidth + window.innerWidth) + 'px';
-        }
-
-        let dx = e.clientX - initialX;
-        let newWidth = initialWidth + dx;
-        let newDuration = Math.round(newWidth / (stepWidth / tempo)) / tempo;
-
-        // Find the closest note to the right
-        let minNextStart = Infinity;
-        for (const n of activeTrack.notes) {
-            if (n !== activeNote.noteData && n.start > activeNote.noteData.start && n.start < minNextStart) {
-                minNextStart = n.start;
-            }
-        }
-
-        // If we are resizing past the closest note, snap to it.
-        if (activeNote.noteData.start + newDuration > minNextStart) {
-            newDuration = minNextStart - activeNote.noteData.start;
-            newWidth = newDuration * stepWidth;
-        }
-
-        // Update all linked note elements' widths simultaneously
-        activeNote.noteData.elements.forEach(el => {
-            el.style.width = newWidth + 'px';
-        });
-
-        let tooltip = document.getElementById('duration-tooltip');
-        tooltip.textContent = newDuration.toFixed(2);
-        tooltip.style.left = (e.clientX + 15) + 'px';
-        tooltip.style.top = (e.clientY + 15) + 'px';
-    }
-
-    function onMouseUpRightHandle(e) {
-        if (!activeNote) return;
-        let newWidth = activeNote.offsetWidth;
-        let newDuration = Math.round(newWidth / stepWidth * tempo) / tempo;
-        let min_duration = 1/tempo;
-        if (newDuration < min_duration) newDuration = min_duration;
-
-        // Collision detection
-        for (let i = 0; i < activeTrack.notes.length; i++) {
-            let n = activeTrack.notes[i];
-            if (n !== activeNote.noteData && activeNote.noteData.start < n.start + n.duration && activeNote.noteData.start + newDuration > n.start) {
-                // Collision detected, revert to original size
-                activeNote.noteData.elements.forEach(el => {
-                    el.style.width = (activeNote.noteData.duration * stepWidth) + 'px';
-                });
-                let tooltip = document.getElementById('duration-tooltip');
-                tooltip.style.display = 'none';
-                document.removeEventListener('mousemove', onMouseMoveRightHandle);
-                document.removeEventListener('mouseup', onMouseUpRightHandle);
-                activeNote = null;
-                activeTrack = null;
-                setTimeout(() => { 
-                    isDraggingOrResizing = false; 
-                }, 0);
-                return;
-            }
-        }
-
-        activeNote.noteData.duration = newDuration;
-        
-        // Update all linked note elements
-        activeNote.noteData.elements.forEach(el => {
-            el.style.width = (newDuration * stepWidth) + 'px';
-        });
-
-        // Extend timeline width if needed
-        updateTimelineWidth(activeTrack);
-
-        let tooltip = document.getElementById('duration-tooltip');
-        tooltip.style.display = 'none';
-
-        document.removeEventListener('mousemove', onMouseMoveRightHandle);
-        document.removeEventListener('mouseup', onMouseUpRightHandle);
-        activeNote = null;
-        activeTrack = null;
-        setTimeout(() => { 
-            isDraggingOrResizing = false; 
-            saveState();
-        }, 0);
-    }
 
 
 
@@ -1753,194 +1202,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showContextMenu(e) {
-        
-        const contextMenu = document.getElementById('context-menu');
-        contextMenu.style.left = `${e.clientX}px`;
-        contextMenu.style.top = `${e.clientY}px`;
-        contextMenu.style.display = 'block';
-
-        const isNote = e.target.classList.contains('note');
-
-        let menuContent = '<ul>';
-        if (isNote) {
-            menuContent += '<li id="menu-copy">Copy</li>';
-            menuContent += '<li id="menu-cut">Cut</li>';
-            menuContent += '<li id="menu-delete">Delete</li>';
-        } else {
-            menuContent += '<li id="menu-new-note">New Note</li>';
-            menuContent += '<li id="menu-paste">Paste</li>';
+    function showTooltip(target, title) {
+        const existingTooltip = document.querySelector('.custom-tooltip-new');
+        if (existingTooltip) {
+            existingTooltip.remove();
         }
-        menuContent += '</ul>';
-        contextMenu.innerHTML = menuContent;
 
-        document.getElementById('menu-copy')?.addEventListener('click', () => {
-            copySelection();
-            document.getElementById('context-menu').style.display = 'none';
-        });
+        if (title) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'custom-tooltip-new';
+            tooltip.textContent = title;
 
-        document.getElementById('menu-cut')?.addEventListener('click', () => {
-            copySelection();
-            isCut = true;
-            selectedNotes.forEach(n => n.elements.forEach(el => el.classList.add('ghosted')));
-            document.getElementById('context-menu').style.display = 'none';
-        });
+            const parent = target.parentElement; // .instrument-col
+            parent.appendChild(tooltip);
 
-        document.getElementById('menu-delete')?.addEventListener('click', () => {
-            selectedNotes.forEach(noteData => {
-                const parentTrack = tracks.find(t => t.notes.includes(noteData));
-                if (!parentTrack) return;
-                const noteIndex = parentTrack.notes.indexOf(noteData);
-                if (noteIndex > -1) parentTrack.notes.splice(noteIndex, 1);
-                noteData.elements.forEach(el => el.remove());
-            });
-            clearSelection();
-            saveState();
-            document.getElementById('context-menu').style.display = 'none';
-        });
-
-        document.getElementById('menu-paste')?.addEventListener('click', () => {
-            if (clipboard) {
-                isPasting = true;
-                updateGhostNotes();
-            }
-            document.getElementById('context-menu').style.display = 'none';
-        });
-
-        document.getElementById('menu-new-note')?.addEventListener('click', () => {
-            const timeline = e.target.closest('.timeline-col');
-            if (!timeline) return;
-
-            const track = tracks.find(t => t.timeline === timeline);
-            if (!track) return;
-
-            let rect = timeline.getBoundingClientRect();
-            let x = e.clientX - rect.left;
-
-            let step = Math.floor((Math.round(x / (stepWidth / tempo)) / tempo) * 100) / 100;
-            if (step < 0) step = 0;
-
-            if (track.notes.some(n => n.start === step)) return;
-
-            let duration = 1;
-
-            for (let i = 0; i < track.notes.length; i++) {
-                let n = track.notes[i];
-                if (step < n.start + n.duration && step + duration > n.start) {
-                    return; // Overlap, so don't create the note
-                }
-            }
-
-            let note = { start: step, duration: duration, elements: [], track: track };
-            track.notes.push(note);
-
-            tracks.forEach(tr => {
-                if (tr.notes === track.notes) {
-                    createNoteElement(tr, note);
-                }
-            });
-            updateTimelineWidth(track);
-            saveState();
-            document.getElementById('context-menu').style.display = 'none';
-        });
+            const targetRect = target.getBoundingClientRect();
+            const parentRect = parent.getBoundingClientRect();
+            
+            // Position below the button
+            tooltip.style.left = `${targetRect.left - parentRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
+            tooltip.style.top = `${targetRect.top - parentRect.top + targetRect.height + 5}px`;
+        }
     }
 
+    const timelineContainer = document.getElementById('timeline-container');
+    const trackHeadersContainer = document.getElementById('track-headers-container');
 
-
-    document.addEventListener('click', (e) => {
-        document.getElementById('context-menu').style.display = 'none';
-
-        if (!colorPaletteDropdown.contains(e.target) && e.target !== colorPaletteBtn) {
-            colorPaletteDropdown.classList.remove('open');
-        }
+    timelineContainer.addEventListener('scroll', () => {
+        trackHeadersContainer.scrollTop = timelineContainer.scrollTop;
     });
 
-    let marqueeBox = document.getElementById('marquee-box');
-    let isMarquee = false;
-    let startX, startY;
+    trackHeadersContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        timelineContainer.scrollTop += e.deltaY;
+    });
+
     const mainContent = document.getElementById('main-content');
-
-    mainContent.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.instrument-col')) return;
-        if (e.target.closest('.note') || e.button !== 0) return;
-
-        isMarquee = true;
-        startX = e.clientX;
-        startY = e.clientY;
-
-        marqueeBox.style.left = `${e.clientX}px`;
-        marqueeBox.style.top = `${e.clientY}px`;
-        marqueeBox.style.width = '0px';
-        marqueeBox.style.height = '0px';
-        marqueeBox.style.display = 'block';
-
-        mainContent.addEventListener('mousemove', onMouseMoveMarquee);
-        mainContent.addEventListener('mouseup', onMouseUpMarquee);
-    });
-
-
-
-    function onMouseMoveMarquee(e) {
-        if (!isMarquee) return;
-
-        let currentX = e.clientX;
-        let currentY = e.clientY;
-
-        let width = currentX - startX;
-        let height = currentY - startY;
-
-        marqueeBox.style.width = `${Math.abs(width)}px`;
-        marqueeBox.style.height = `${Math.abs(height)}px`;
-
-        const newLeft = (width > 0 ? startX : currentX);
-        const newTop = (height > 0 ? startY : currentY);
-
-        marqueeBox.style.left = `${newLeft}px`;
-        marqueeBox.style.top = `${newTop}px`;
-    }
-
-
-
-    function onMouseUpMarquee(e) {
-        if (!isMarquee) return;
-        isMarquee = false;
-        marqueeBox.style.display = 'none';
-
-        const marqueeRect = {
-            left: parseFloat(marqueeBox.style.left),
-            top: parseFloat(marqueeBox.style.top),
-            width: parseFloat(marqueeBox.style.width),
-            height: parseFloat(marqueeBox.style.height)
-        };
-        marqueeRect.right = marqueeRect.left + marqueeRect.width;
-        marqueeRect.bottom = marqueeRect.top + marqueeRect.height;
-
-        if (!e.shiftKey) {
-            clearSelection();
-        }
-
-        tracks.forEach(track => {
-            track.notes.forEach(note => {
-                note.elements.forEach(el => {
-                    const elRect = el.getBoundingClientRect();
-                    if (
-                        marqueeRect.left < elRect.right &&
-                        marqueeRect.right > elRect.left &&
-                        marqueeRect.top < elRect.bottom &&
-                        marqueeRect.bottom > elRect.top
-                    ) {
-                        if (!selectedNotes.includes(note)) {
-                            selectedNotes.push(note);
-                            note.elements.forEach(selectedEl => selectedEl.classList.add('selected'));
-                        }
-                    }
-                });
-            });
-        });
-
-        mainContent.removeEventListener('mousemove', onMouseMoveMarquee);
-        mainContent.removeEventListener('mouseup', onMouseUpMarquee);
-    }
 
     let rightMouseDown = false;
     let isPanning = false;
@@ -1984,70 +1281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    mainContent.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (didPan) {
-            didPan = false; // reset for next time
-        } else {
-            showContextMenu(e);
-        }
-        return false;
-    });
 
-    function showTooltip(e) {
-        const target = e.target;
-        const title = target.title || target.dataset.title;
-        if (title) {
-            if (target.title) {
-                target.dataset.title = target.title;
-                target.title = '';
-            }
-
-            const tooltip = document.createElement('span');
-            tooltip.className = 'custom-tooltip-new';
-            tooltip.textContent = title;
-
-            const parent = target.parentElement; // .instrument-col
-            parent.appendChild(tooltip);
-
-            const targetRect = target.getBoundingClientRect();
-            const parentRect = parent.getBoundingClientRect();
-            
-            // Position below the button
-            tooltip.style.left = `${targetRect.left - parentRect.left + targetRect.width / 2 - tooltip.offsetWidth / 2}px`;
-            tooltip.style.top = `${targetRect.top - parentRect.top + targetRect.height + 5}px`;
-        }
-    }
-
-    function hideTooltip(e) {
-        const target = e.target;
-        if (target.dataset.title) {
-            target.title = target.dataset.title;
-        }
-
-        const tooltip = target.parentElement.querySelector('.custom-tooltip-new');
-        if (tooltip) {
-            tooltip.remove();
-        }
-    }
-
-
-
-    const trackHeadersContainer = document.getElementById('track-headers-container');
-    const timelineContainer = document.getElementById('timeline-container');
-
-    trackHeadersContainer.addEventListener('scroll', () => {
-        timelineContainer.scrollTop = trackHeadersContainer.scrollTop;
-    });
-
-    timelineContainer.addEventListener('scroll', () => {
-        trackHeadersContainer.scrollTop = timelineContainer.scrollTop;
-    });
-
-    trackHeadersContainer.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        timelineContainer.scrollTop += e.deltaY;
-    });
 
     loadState();
 });
