@@ -621,6 +621,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    function onMouseDownNote(e) {
+        isDraggingOrResizing = true;
+        document.body.classList.add('dragging');
+
+        const noteElement = e.target;
+        const note = noteElement.noteData;
+        const track = note.track;
+        const initialX = e.clientX;
+        const initialLeft = noteElement.offsetLeft;
+        const initialWidth = noteElement.offsetWidth;
+
+        const isResizeLeft = e.offsetX < 10;
+        const isResizeRight = e.offsetX > noteElement.offsetWidth - 10;
+
+        function onMouseMove(e) {
+            const dx = e.clientX - initialX;
+            if (isResizeLeft) {
+                const newWidth = initialWidth - dx;
+                const newLeft = initialLeft + dx;
+                if (newWidth > 0) {
+                    note.start = newLeft / stepWidth;
+                    note.duration = newWidth / stepWidth;
+                }
+            } else if (isResizeRight) {
+                const newWidth = initialWidth + dx;
+                if (newWidth > 0) {
+                    note.duration = newWidth / stepWidth;
+                }
+            } else {
+                const newLeft = initialLeft + dx;
+                note.start = newLeft / stepWidth;
+            }
+            redrawAllNotes();
+        }
+
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.classList.remove('dragging');
+            isDraggingOrResizing = false;
+            updateAllTimelineWidths();
+            saveState();
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+
     function createNoteElement(track, note) {
         let tl = track.timeline;
         let div = document.createElement('div');
@@ -1030,26 +1078,18 @@ document.addEventListener('DOMContentLoaded', () => {
         let exportData = '';
         let lastTime = 0;
         const sortedStartTimes = Array.from(allStartTimes).sort((a, b) => a - b);
-        let notesCount = 0;
 
         for (const time of sortedStartTimes) {
             const notesAtTime = allNotes.filter(note => Math.abs(note.start - time) < 0.001);
             if (notesAtTime.length > 0) {
                 if (time > lastTime) {
                     const delay = time - lastTime;
-                    exportData += 'x,' + delay.toFixed(2) + ' ';
-                    notesCount++;
+                    exportData += 'x,' + delay.toFixed(2) + '\n';
                 }
                 const notesString = notesAtTime.map(note => {
                     return `${note.instrument},${note.duration.toFixed(2)}`;
-                }).join(' ');
-                exportData += notesString + ' ';
-                notesCount += notesAtTime.length;
-
-                if (notesCount >= 12) {
-                    exportData += '';
-                    notesCount = 0;
-                }
+                }).join('\n');
+                exportData += notesString + '\n';
                 lastTime = time;
             }
         }
@@ -1281,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
+    mainContent.addEventListener('contextmenu', e => e.preventDefault());
 
     loadState();
 });
