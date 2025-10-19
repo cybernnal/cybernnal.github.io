@@ -1144,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const instrumentNotes = {};
             let currentTime = 0;
-            const parts = content.trim().split(/\s+/);
+            const parts = content.trim().split(/\r?\n/);
 
             if (parts.length === 1 && parts[0] === '') {
                 addTrack();
