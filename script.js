@@ -1459,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectionBox = null;
 
     mainContent.addEventListener('mousedown', (e) => {
-        if (e.target.classList.contains('timeline-col')) {
+        if (e.button === 0 && e.target.classList.contains('timeline-col')) {
             const startX = e.clientX;
             const startY = e.clientY;
 
