@@ -840,6 +840,24 @@ document.addEventListener('DOMContentLoaded', () => {
         div.addEventListener('mousedown', onMouseDownNote);
         div.addEventListener('dragstart', (e) => { e.preventDefault(); return false; });
 
+        div.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+
+            const now = Date.now();
+            if (div.lastRightClick && (now - div.lastRightClick) < 300) {
+                const track = note.track;
+                const index = track.notes.indexOf(note);
+                if (index > -1) {
+                    track.notes.splice(index, 1);
+                }
+                note.elements.forEach(el => el.remove());
+                saveState();
+                div.lastRightClick = 0;
+            } else {
+                div.lastRightClick = now;
+            }
+        });
+
 
 
         tl.appendChild(div);
@@ -1408,7 +1426,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    mainContent.addEventListener('pointermove', (e) => {
+    document.addEventListener('pointermove', (e) => {
         if (rightMouseDown && !isPanning) {
             const dx = Math.abs(e.clientX - panStartX);
             const dy = Math.abs(e.clientY - panStartY);
@@ -1428,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    mainContent.addEventListener('mouseup', (e) => {
+    document.addEventListener('mouseup', (e) => {
         if (e.button === 2) {
             rightMouseDown = false;
             isPanning = false;
@@ -1436,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    mainContent.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => e.preventDefault());
 
     let selectionBox = null;
 
