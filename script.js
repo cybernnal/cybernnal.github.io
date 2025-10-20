@@ -426,25 +426,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let tdTimeline = document.createElement('td');
         let timeline = document.createElement('div');
         timeline.className = 'timeline-col';
-        timeline.addEventListener('dblclick', (e) => {
-            if (e.target.classList.contains('timeline-col')) {
-                const rect = timeline.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                let start = x / stepWidth;
-                const snap = Math.max(0.25, 1 / tempo);
-                start = Math.round(start / snap) * snap;
-
-                const note = { start: start, duration: snap, elements: [], track: track };
-
-                if (getCollidingNote(note, track)) {
-                    return;
-                }
-
-                track.notes.push(note);
-                createNoteElement(track, note);
-                saveState();
-            }
-        });
         timeline.style.minWidth = '1000px'; // initial width
         tdTimeline.appendChild(timeline);
         trTimeline.appendChild(tdTimeline);
@@ -687,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lastValidPositions.set(sn, sn.start);
         });
 
-        function onMouseMove(e) {
+        onMouseMove_note = (e) => {
             const dx = e.clientX - initialX;
             const snap = Math.max(0.25, 1 / tempo);
 
@@ -812,19 +793,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             redrawAllNotes();
-        }
+        };
+        document.addEventListener('mousemove', onMouseMove_note);
 
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            document.body.classList.remove('dragging');
-            isDraggingOrResizing = false;
-            updateAllTimelineWidths();
-            saveState();
-        }
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
     }
 
     function createNoteElement(track, note) {
@@ -1412,54 +1384,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const mainContent = document.getElementById('main-content');
 
-    let rightMouseDown = false;
     let isPanning = false;
+    let isSelecting = false;
     let didPan = false;
-    let panStartX, panStartY;
+    let selectionBox = null;
+    let onMouseMove_selectionBox = null;
+    let onMouseMove_note = null;
+
+    let isDraggingOrResizing = false;
 
     mainContent.addEventListener('mousedown', (e) => {
         if (e.button === 2) { // Right mouse button
-            rightMouseDown = true;
+            isPanning = true;
             panStartX = e.clientX;
             panStartY = e.clientY;
             didPan = false;
-        }
-    });
-
-    document.addEventListener('pointermove', (e) => {
-        if (rightMouseDown && !isPanning) {
-            const dx = Math.abs(e.clientX - panStartX);
-            const dy = Math.abs(e.clientY - panStartY);
-            if (dx > 10 || dy > 10) {
-                isPanning = true;
-                mainContent.style.cursor = 'grabbing';
-            }
-        }
-        if (isPanning) {
-            didPan = true;
-            const dx = e.clientX - panStartX;
-            const dy = e.clientY - panStartY;
-            mainContent.scrollLeft -= dx;
-            mainContent.scrollTop -= dy;
-            panStartX = e.clientX;
-            panStartY = e.clientY;
-        }
-    });
-
-    document.addEventListener('mouseup', (e) => {
-        if (e.button === 2) {
-            rightMouseDown = false;
-            isPanning = false;
-            mainContent.style.cursor = 'grab';
-        }
-    });
-
-    document.addEventListener('contextmenu', e => e.preventDefault());
-
-    let selectionBox = null;
-
-    mainContent.addEventListener('mousedown', (e) => {
-        if (e.button === 0 && e.target.classList.contains('timeline-col')) {
+        } else if (e.button === 0 && e.target.classList.contains('timeline-col')) {
+            isSelecting = true;
             const startX = e.clientX;
             const startY = e.clientY;
 
@@ -1473,7 +1414,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectionBox.style.height = '0px';
             document.body.appendChild(selectionBox);
 
-            const onMouseMove = (e) => {
+            onMouseMove_selectionBox = (e) => {
                 const currentX = e.clientX;
                 const currentY = e.clientY;
                 const width = currentX - startX;
@@ -1485,37 +1426,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectionBox.style.top = (height > 0 ? startY : currentY) + 'px';
             };
 
-            const onMouseUp = () => {
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
+            document.addEventListener('mousemove', onMouseMove_selectionBox);
+        }
+    });
 
-                const selectionRect = selectionBox.getBoundingClientRect();
-                selectedNotes = [];
-                tracks.forEach(track => {
-                    track.notes.forEach(note => {
-                        note.elements.forEach(noteEl => {
-                            const noteRect = noteEl.getBoundingClientRect();
-                            if (
-                                selectionRect.left < noteRect.right &&
-                                selectionRect.right > noteRect.left &&
-                                selectionRect.top < noteRect.bottom &&
-                                selectionRect.bottom > noteRect.top
-                            ) {
-                                selectedNotes.push(note);
-                                noteEl.style.border = '2px solid #ff0';
-                            } else {
-                                noteEl.style.border = '1px solid blue';
-                            }
-                        });
+    document.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            didPan = false;
+            mainContent.style.cursor = 'grab';
+        }
+        if (isSelecting) {
+            isSelecting = false;
+            document.removeEventListener('mousemove', onMouseMove_selectionBox);
+
+            const selectionRect = selectionBox.getBoundingClientRect();
+            selectedNotes = [];
+            tracks.forEach(track => {
+                track.notes.forEach(note => {
+                    note.elements.forEach(noteEl => {
+                        const noteRect = noteEl.getBoundingClientRect();
+                        if (
+                            selectionRect.left < noteRect.right &&
+                            selectionRect.right > noteRect.left &&
+                            selectionRect.top < noteRect.bottom &&
+                            selectionRect.bottom > noteRect.top
+                        ) {
+                            selectedNotes.push(note);
+                            noteEl.style.border = '2px solid #ff0';
+                        } else {
+                            noteEl.style.border = '1px solid blue';
+                        }
                     });
                 });
+            });
 
-                document.body.removeChild(selectionBox);
-                selectionBox = null;
-            };
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+            document.body.removeChild(selectionBox);
+            selectionBox = null;
+        }
+        if (isDraggingOrResizing) {
+            if (onMouseMove_note) {
+                document.removeEventListener('mousemove', onMouseMove_note);
+                onMouseMove_note = null;
+            }
+            isDraggingOrResizing = false;
+            document.body.classList.remove('dragging');
+            updateAllTimelineWidths();
+            saveState();
         }
     });
 
