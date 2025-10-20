@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let zoomLevel = 25; // Default zoom level
     let masterVolume = 1;
 
+    let selectedNotes = [];
+
 
 
 
@@ -424,6 +426,25 @@ document.addEventListener('DOMContentLoaded', () => {
         let tdTimeline = document.createElement('td');
         let timeline = document.createElement('div');
         timeline.className = 'timeline-col';
+        timeline.addEventListener('dblclick', (e) => {
+            if (e.target.classList.contains('timeline-col')) {
+                const rect = timeline.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                let start = x / stepWidth;
+                const snap = Math.max(0.25, 1 / tempo);
+                start = Math.round(start / snap) * snap;
+
+                const note = { start: start, duration: snap, elements: [], track: track };
+
+                if (getCollidingNote(note, track)) {
+                    return;
+                }
+
+                track.notes.push(note);
+                createNoteElement(track, note);
+                saveState();
+            }
+        });
         timeline.style.minWidth = '1000px'; // initial width
         tdTimeline.appendChild(timeline);
         trTimeline.appendChild(tdTimeline);
@@ -621,6 +642,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+    function getCollidingNote(checkNote, track) {
+        for (const note of track.notes) {
+            if (note !== checkNote && !selectedNotes.includes(note)) {
+                if (checkNote.start < note.start + note.duration && checkNote.start + checkNote.duration > note.start) {
+                    return note;
+                }
+            }
+        }
+        return null;
+    }
+
     function onMouseDownNote(e) {
         isDraggingOrResizing = true;
         document.body.classList.add('dragging');
@@ -632,26 +664,152 @@ document.addEventListener('DOMContentLoaded', () => {
         const initialLeft = noteElement.offsetLeft;
         const initialWidth = noteElement.offsetWidth;
 
+        if (!selectedNotes.includes(note)) {
+            selectedNotes.forEach(sn => {
+                sn.elements.forEach(el => {
+                    el.style.border = '1px solid blue';
+                });
+            });
+            selectedNotes = [note];
+            noteElement.style.border = '2px solid #ff0';
+        }
+
+        const initialNotePositions = new Map();
+        selectedNotes.forEach(sn => {
+            initialNotePositions.set(sn, { start: sn.start, duration: sn.duration });
+        });
+
         const isResizeLeft = e.offsetX < 10;
         const isResizeRight = e.offsetX > noteElement.offsetWidth - 10;
 
+        const lastValidPositions = new Map();
+        selectedNotes.forEach(sn => {
+            lastValidPositions.set(sn, sn.start);
+        });
+
         function onMouseMove(e) {
             const dx = e.clientX - initialX;
+            const snap = Math.max(0.25, 1 / tempo);
+
             if (isResizeLeft) {
                 const newWidth = initialWidth - dx;
                 const newLeft = initialLeft + dx;
                 if (newWidth > 0) {
-                    note.start = newLeft / stepWidth;
-                    note.duration = newWidth / stepWidth;
+                    let newStart = newLeft / stepWidth;
+                    let newDuration = newWidth / stepWidth;
+
+                    newStart = Math.round(newStart / snap) * snap;
+                    newDuration = Math.round(newDuration / snap) * snap;
+
+                    if (newDuration < snap) newDuration = snap;
+
+                    const tempNote = { ...note, start: newStart, duration: newDuration };
+                    const collidingNote = getCollidingNote(tempNote, track);
+
+                    if (collidingNote) {
+                        newStart = collidingNote.start + collidingNote.duration;
+                        newDuration = (initialNotePositions.get(note).start + initialNotePositions.get(note).duration) - newStart;
+                        if (newDuration < snap) return; // Not enough space
+                    }
+
+                    note.start = newStart;
+                    note.duration = newDuration;
                 }
             } else if (isResizeRight) {
                 const newWidth = initialWidth + dx;
                 if (newWidth > 0) {
-                    note.duration = newWidth / stepWidth;
+                    let newDuration = newWidth / stepWidth;
+                    newDuration = Math.round(newDuration / snap) * snap;
+                    if (newDuration < snap) newDuration = snap;
+
+                    const tempNote = { ...note, duration: newDuration };
+                    const collidingNote = getCollidingNote(tempNote, track);
+
+                    if (collidingNote) {
+                        newDuration = collidingNote.start - note.start;
+                        if (newDuration < snap) return; // Not enough space
+                    }
+                    note.duration = newDuration;
                 }
             } else {
                 const newLeft = initialLeft + dx;
-                note.start = newLeft / stepWidth;
+                let newStart = newLeft / stepWidth;
+                newStart = Math.round(newStart / snap) * snap;
+
+                const startOffset = newStart - initialNotePositions.get(note).start;
+
+                let collision = false;
+                for (const sn of selectedNotes) {
+                    const tempStart = initialNotePositions.get(sn).start + startOffset;
+                    const tempNote = { ...sn, start: tempStart };
+                    if (getCollidingNote(tempNote, sn.track)) {
+                        collision = true;
+                        break;
+                    }
+                }
+
+                if (!collision) {
+                    selectedNotes.forEach(sn => {
+                        const newSnStart = initialNotePositions.get(sn).start + startOffset;
+                        sn.start = newSnStart;
+                        lastValidPositions.set(sn, newSnStart);
+                    });
+                } else {
+                    const dragDirection = dx > 0 ? 'right' : 'left';
+                    let newOffset = startOffset;
+
+                    if (dragDirection === 'right') {
+                        let maxAllowedOffset = Infinity;
+                        for (const sn of selectedNotes) {
+                            const tempStart = initialNotePositions.get(sn).start + startOffset;
+                            const tempNote = { ...sn, start: tempStart };
+                            const collidingNote = getCollidingNote(tempNote, sn.track);
+                            if (collidingNote) {
+                                const validOffset = (collidingNote.start - sn.duration) - initialNotePositions.get(sn).start;
+                                if (validOffset < maxAllowedOffset) {
+                                    maxAllowedOffset = validOffset;
+                                }
+                            }
+                        }
+                        newOffset = maxAllowedOffset;
+                    } else { // dragging left
+                        let minAllowedOffset = -Infinity;
+                        for (const sn of selectedNotes) {
+                            const tempStart = initialNotePositions.get(sn).start + startOffset;
+                            const tempNote = { ...sn, start: tempStart };
+                            const collidingNote = getCollidingNote(tempNote, sn.track);
+                            if (collidingNote) {
+                                const validOffset = (collidingNote.start + collidingNote.duration) - initialNotePositions.get(sn).start;
+                                if (validOffset > minAllowedOffset) {
+                                    minAllowedOffset = validOffset;
+                                }
+                            }
+                        }
+                        newOffset = minAllowedOffset;
+                    }
+
+                    let safeToApply = true;
+                    for (const sn of selectedNotes) {
+                        const finalStart = initialNotePositions.get(sn).start + newOffset;
+                        const tempNote = { ...sn, start: finalStart };
+                        if (getCollidingNote(tempNote, sn.track)) {
+                            safeToApply = false;
+                            break;
+                        }
+                    }
+
+                    if (safeToApply) {
+                        selectedNotes.forEach(sn => {
+                            const newSnStart = initialNotePositions.get(sn).start + newOffset;
+                            sn.start = newSnStart;
+                            lastValidPositions.set(sn, newSnStart);
+                        });
+                    } else {
+                        selectedNotes.forEach(sn => {
+                            sn.start = lastValidPositions.get(sn);
+                        });
+                    }
+                }
             }
             redrawAllNotes();
         }
@@ -1279,6 +1437,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     mainContent.addEventListener('contextmenu', e => e.preventDefault());
+
+    let selectionBox = null;
+
+    mainContent.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('timeline-col')) {
+            const startX = e.clientX;
+            const startY = e.clientY;
+
+            selectionBox = document.createElement('div');
+            selectionBox.style.position = 'absolute';
+            selectionBox.style.border = '1px dashed #fff';
+            selectionBox.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            selectionBox.style.left = startX + 'px';
+            selectionBox.style.top = startY + 'px';
+            selectionBox.style.width = '0px';
+            selectionBox.style.height = '0px';
+            document.body.appendChild(selectionBox);
+
+            const onMouseMove = (e) => {
+                const currentX = e.clientX;
+                const currentY = e.clientY;
+                const width = currentX - startX;
+                const height = currentY - startY;
+
+                selectionBox.style.width = Math.abs(width) + 'px';
+                selectionBox.style.height = Math.abs(height) + 'px';
+                selectionBox.style.left = (width > 0 ? startX : currentX) + 'px';
+                selectionBox.style.top = (height > 0 ? startY : currentY) + 'px';
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+
+                const selectionRect = selectionBox.getBoundingClientRect();
+                selectedNotes = [];
+                tracks.forEach(track => {
+                    track.notes.forEach(note => {
+                        note.elements.forEach(noteEl => {
+                            const noteRect = noteEl.getBoundingClientRect();
+                            if (
+                                selectionRect.left < noteRect.right &&
+                                selectionRect.right > noteRect.left &&
+                                selectionRect.top < noteRect.bottom &&
+                                selectionRect.bottom > noteRect.top
+                            ) {
+                                selectedNotes.push(note);
+                                noteEl.style.border = '2px solid #ff0';
+                            } else {
+                                noteEl.style.border = '1px solid blue';
+                            }
+                        });
+                    });
+                });
+
+                document.body.removeChild(selectionBox);
+                selectionBox = null;
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+    });
 
     loadState();
 });
