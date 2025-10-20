@@ -1,3 +1,8 @@
+document.addEventListener('contextmenu', (e) => {
+    if (e.target.tagName.toLowerCase() !== 'input') {
+        e.preventDefault();
+    }
+});
 document.addEventListener('DOMContentLoaded', () => {
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const body = document.body;
@@ -635,6 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function onMouseDownNote(e) {
+        if (e.button !== 0) return;
         isDraggingOrResizing = true;
         document.body.classList.add('dragging');
 
@@ -1390,16 +1396,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectionBox = null;
     let onMouseMove_selectionBox = null;
     let onMouseMove_note = null;
+    let panStartX, panStartY;
+    let onMouseMove_panning = null;
 
     let isDraggingOrResizing = false;
 
     mainContent.addEventListener('mousedown', (e) => {
-        if (e.button === 2) { // Right mouse button
+        if (e.button === 2 && !e.target.classList.contains('note')) { // Right mouse button for panning
             isPanning = true;
             panStartX = e.clientX;
             panStartY = e.clientY;
             didPan = false;
-        } else if (e.button === 0 && e.target.classList.contains('timeline-col')) {
+            mainContent.style.cursor = 'grabbing';
+
+            onMouseMove_panning = (moveEvent) => {
+                const dx = moveEvent.clientX - panStartX;
+                const dy = moveEvent.clientY - panStartY;
+                mainContent.scrollLeft -= dx;
+                mainContent.scrollTop -= dy;
+                panStartX = moveEvent.clientX;
+                panStartY = moveEvent.clientY;
+                didPan = true;
+            };
+            document.addEventListener('mousemove', onMouseMove_panning);
+
+        } else if (e.button === 0 && e.target.classList.contains('timeline-col')) { // Left mouse button for selection
             isSelecting = true;
             const startX = e.clientX;
             const startY = e.clientY;
@@ -1435,6 +1456,10 @@ document.addEventListener('DOMContentLoaded', () => {
             isPanning = false;
             didPan = false;
             mainContent.style.cursor = 'grab';
+            if (onMouseMove_panning) {
+                document.removeEventListener('mousemove', onMouseMove_panning);
+                onMouseMove_panning = null;
+            }
         }
         if (isSelecting) {
             isSelecting = false;
