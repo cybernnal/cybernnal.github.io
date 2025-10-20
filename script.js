@@ -432,6 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let timeline = document.createElement('div');
         timeline.className = 'timeline-col';
         timeline.style.minWidth = '1000px'; // initial width
+
         tdTimeline.appendChild(timeline);
         trTimeline.appendChild(tdTimeline);
 
@@ -446,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         track.timeline = timeline;
         track.input = input;
         track.label = label;
+        timeline.track = track;
 
         dupBtn.addEventListener('click', () => {
             const sourceTrack = track;
@@ -1420,34 +1422,74 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             document.addEventListener('mousemove', onMouseMove_panning);
 
-        } else if (e.button === 0 && e.target.classList.contains('timeline-col')) { // Left mouse button for selection
-            isSelecting = true;
-            const startX = e.clientX;
-            const startY = e.clientY;
+        } else if (e.button === 0 && e.target.classList.contains('timeline-col')) { // Left mouse button on timeline
+            const timeline = e.target;
+            const track = timeline.track;
+            if (!track) return;
 
-            selectionBox = document.createElement('div');
-            selectionBox.style.position = 'absolute';
-            selectionBox.style.border = '1px dashed #fff';
-            selectionBox.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-            selectionBox.style.left = startX + 'px';
-            selectionBox.style.top = startY + 'px';
-            selectionBox.style.width = '0px';
-            selectionBox.style.height = '0px';
-            document.body.appendChild(selectionBox);
+            const now = Date.now();
+            if (timeline.lastClick && (now - timeline.lastClick) < 300) {
+                // Double-click: create note
+                timeline.lastClick = 0;
 
-            onMouseMove_selectionBox = (e) => {
-                const currentX = e.clientX;
-                const currentY = e.clientY;
-                const width = currentX - startX;
-                const height = currentY - startY;
+                const snap = Math.max(0.25, 1 / tempo);
+                const start = Math.round((e.offsetX / stepWidth) / snap) * snap;
+                const duration = snap;
 
-                selectionBox.style.width = Math.abs(width) + 'px';
-                selectionBox.style.height = Math.abs(height) + 'px';
-                selectionBox.style.left = (width > 0 ? startX : currentX) + 'px';
-                selectionBox.style.top = (height > 0 ? startY : currentY) + 'px';
-            };
+                const noteOwnerTrack = track.isLinked ? tracks.find(t => t.groupId === track.groupId && !t.isLinked) : track;
+                if (!noteOwnerTrack) return;
 
-            document.addEventListener('mousemove', onMouseMove_selectionBox);
+                const newNote = { start, duration, elements: [], track: noteOwnerTrack };
+
+                if (getCollidingNote(newNote, noteOwnerTrack)) {
+                    return;
+                }
+
+                noteOwnerTrack.notes.push(newNote);
+
+                const groupTracks = tracks.filter(t => t.groupId === noteOwnerTrack.groupId);
+                groupTracks.forEach(groupTrack => {
+                    createNoteElement(groupTrack, newNote);
+                });
+
+                updateAllTimelineWidths();
+                saveState();
+
+            } else {
+                // Single-click: start selection
+                timeline.lastClick = now;
+                
+                isSelecting = true;
+                const startX = e.clientX;
+                const startY = e.clientY;
+
+                onMouseMove_selectionBox = (e) => {
+                    if (!selectionBox) {
+                        if (Math.abs(e.clientX - startX) < 5 && Math.abs(e.clientY - startY) < 5) {
+                            return;
+                        }
+                        selectionBox = document.createElement('div');
+                        selectionBox.style.position = 'absolute';
+                        selectionBox.style.border = '1px dashed #fff';
+                        selectionBox.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                        selectionBox.style.left = startX + 'px';
+                        selectionBox.style.top = startY + 'px';
+                        document.body.appendChild(selectionBox);
+                    }
+                    
+                    const currentX = e.clientX;
+                    const currentY = e.clientY;
+                    const width = currentX - startX;
+                    const height = currentY - startY;
+
+                    selectionBox.style.width = Math.abs(width) + 'px';
+                    selectionBox.style.height = Math.abs(height) + 'px';
+                    selectionBox.style.left = (width > 0 ? startX : currentX) + 'px';
+                    selectionBox.style.top = (height > 0 ? startY : currentY) + 'px';
+                };
+
+                document.addEventListener('mousemove', onMouseMove_selectionBox);
+            }
         }
     });
 
@@ -1465,29 +1507,31 @@ document.addEventListener('DOMContentLoaded', () => {
             isSelecting = false;
             document.removeEventListener('mousemove', onMouseMove_selectionBox);
 
-            const selectionRect = selectionBox.getBoundingClientRect();
-            selectedNotes = [];
-            tracks.forEach(track => {
-                track.notes.forEach(note => {
-                    note.elements.forEach(noteEl => {
-                        const noteRect = noteEl.getBoundingClientRect();
-                        if (
-                            selectionRect.left < noteRect.right &&
-                            selectionRect.right > noteRect.left &&
-                            selectionRect.top < noteRect.bottom &&
-                            selectionRect.bottom > noteRect.top
-                        ) {
-                            selectedNotes.push(note);
-                            noteEl.style.border = '2px solid #ff0';
-                        } else {
-                            noteEl.style.border = '1px solid blue';
-                        }
+            if (selectionBox) {
+                const selectionRect = selectionBox.getBoundingClientRect();
+                selectedNotes = [];
+                tracks.forEach(track => {
+                    track.notes.forEach(note => {
+                        note.elements.forEach(noteEl => {
+                            const noteRect = noteEl.getBoundingClientRect();
+                            if (
+                                selectionRect.left < noteRect.right &&
+                                selectionRect.right > noteRect.left &&
+                                selectionRect.top < noteRect.bottom &&
+                                selectionRect.bottom > noteRect.top
+                            ) {
+                                selectedNotes.push(note);
+                                noteEl.style.border = '2px solid #ff0';
+                            } else {
+                                noteEl.style.border = '1px solid blue';
+                            }
+                        });
                     });
                 });
-            });
 
-            document.body.removeChild(selectionBox);
-            selectionBox = null;
+                document.body.removeChild(selectionBox);
+                selectionBox = null;
+            }
         }
         if (isDraggingOrResizing) {
             if (onMouseMove_note) {
