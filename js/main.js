@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (e.button === 0 && !e.target.classList.contains('note')) { // Left-click on empty area
+            if (e.target.closest('.track-header')) {
+                return;
+            }
             // Check for double-click before initiating selection box.
             const now = Date.now();
             const lastClick = parseFloat(appContainer.dataset.lastClick) || 0;

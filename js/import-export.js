@@ -14,7 +14,7 @@ MusicMaker.importTracks = function() {
             const songData = MusicMaker.parseAndLoadSong(content);
             tracks = songData.tracks;
             songTotalTime = songData.totalTime;
-            MusicMaker.createUI(); // Clear and recreate UI
+            MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
             MusicMaker.renderAllNotes(); // Render the new notes
         };
         reader.readAsText(file);
@@ -33,6 +33,7 @@ MusicMaker.parseAndLoadSong = function(content) {
     const localTracks = [];
     let currentTime = 0;
     const parts = content.trim().replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/);
+    const trackLayout = {};
 
     parts.forEach(part => {
         if (!part) return;
@@ -52,20 +53,29 @@ MusicMaker.parseAndLoadSong = function(content) {
             const instrumentCode = noteInfo.charAt(1);
             const octave = sizeToOctave[size];
             const pitchName = noteInfo.substring(2);
+            const instrumentName = instrumentMap[instrumentCode] || 'diapason';
+            const fullPitchName = pitchName + octave;
 
             const newNote = {
                 id: Date.now() + Math.random(),
                 size: size,
-                instrumentName: instrumentMap[instrumentCode] || 'diapason',
-                pitch: pitchName + octave, // e.g., C + 5 = C5
+                instrumentName: instrumentName,
+                pitch: fullPitchName, // e.g., C + 5 = C5
                 start: currentTime,
                 duration: duration
             };
             localTracks.push(newNote);
+
+            if (!trackLayout[fullPitchName]) {
+                trackLayout[fullPitchName] = [];
+            }
+            if (!trackLayout[fullPitchName].includes(instrumentName)) {
+                trackLayout[fullPitchName].push(instrumentName);
+            }
         }
     });
 
-    return { tracks: localTracks, totalTime: currentTime };
+    return { tracks: localTracks, totalTime: currentTime, trackLayout: trackLayout };
 };
 
 MusicMaker.exportTracks = function(songData) {
