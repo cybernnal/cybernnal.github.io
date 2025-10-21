@@ -1,366 +1,105 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden;
+  background-color: #333;
+  color: #fff;
 }
 
-  #app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-  #header {
+#header {
     padding: 10px;
+    border-bottom: 1px solid #444;
     position: sticky;
     top: 0;
     z-index: 10;
-  }
-  body.dark-mode { background-color: #333; color: #fff; }
-  body.dark-mode #header { background-color: #222; border-bottom: 1px solid #444; }
-  #main-content {
-    flex-grow: 1;
-    display: flex;
-    overflow-x: auto; /* Single horizontal scrollbar */
-  }
-
-  #track-headers-container {
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    background-color: #fff; /* Match body or a specific color */
-  }
-
-  body.dark-mode #track-headers-container {
-    background-color: #333;
-  }
-
-  #timeline-container {
-    flex-grow: 1;
-  }
-
-  .hide-scrollbars::-webkit-scrollbar {
-    display: none;
-  }
-
-  .hide-scrollbars {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-
-  #track-headers-table, #timeline-table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-
-  #track-headers-table th, #timeline-table th {
-    height: 22px; /* Adjust as needed */
-  }
-
-  #track-headers-table th, #track-headers-table td,
-  #timeline-table th, #timeline-table td {
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-    padding: 0;
-  }
-
-  #track-headers-table th {
-    background-color: #f2f2f2;
-  }
-
-  body.dark-mode #main-content { background-color: #333; }
-  body.dark-mode #track-headers-table th,
-  body.dark-mode #timeline-table th {
-    background-color: #444;
-    border-color: #555;
-  }
-
-  body.dark-mode #track-headers-table td,
-  body.dark-mode #timeline-table td {
-    border-color: #555;
     background-color: #222;
-  }
+}
 
-  body.dark-mode .timeline-col {
-    background-image: linear-gradient(to right, #444 1px, transparent 1px), linear-gradient(to bottom, #444 1px, transparent 1px);
-    /* border-bottom-color: #555; */
-  }
-  .drag-handle { 
-    color: #888; 
-    font-size: 10px;
-    line-height: 1;
-    cursor: move;
-  }
+#app-container {
+  height: 100vh;
+  overflow: auto; /* single scrollbar */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
 
-  body.dragging {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    cursor: grabbing;
-  }
-  .instrument-col { 
-    position: relative;
-    display: flex; 
-    align-items: center; 
-    gap: 2px; 
-  }
-
-
-
-  .indented .instrument-col {
-      margin-left: 20px;
-  }
-  
-  .indented {
-      background-color: #f0f0f0;
-  }
-  
-  body.dark-mode .indented {
-      background-color: #2a2a2a;
-  }
-  .instrument-col button {
-    font-size: 10px;
-    font-weight: bold;
-    padding: 0;
-    height: 14px;
-    width: 14px;
-    line-height: 1;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  .instrument-col input {
-    font-size: 8px;
-    padding: 1px;
-    height: 12px;
-    box-sizing: border-box;
-  }
-  .instrument-col input[type="text"] {
-    width: 50px;
-  }
-  .instrument-col .volume-slider {
-    width: 40px;
-  }
-  .track-label {
-    flex-basis: 30px;
-    flex-shrink: 0;
-    text-align: left;
-    margin-right: 5px;
-    font-size: 10px;
-    color: #000;
-    white-space: nowrap;
-  }
-  .track-label-input-container { 
-    /* flex-grow: 1; */
-    display: flex; 
-    align-items: center; 
-    gap: 5px; 
-    min-width: 0;
-  }
-
-  .track-label-input-container input {
-    width: 80px;
-  }
-  .timeline-col {
-    position: relative; 
-    height: 100%; 
-    background-image: linear-gradient(to right, #ccc 1px, transparent 1px), linear-gradient(to bottom, #ccc 1px, transparent 1px);
-    background-size: 30px 100%, 100% 21px;
-    /* border-bottom: 2px solid #ccc; */
-    box-sizing: border-box;
-  }
-  body.dark-mode .timeline-col {
-    background-image: linear-gradient(to right, #555 1px, transparent 1px), linear-gradient(to bottom, #555 1px, transparent 1px);
-    border-bottom-color: #555;
-  }
-  
-.note {
-    position: absolute; height: 80%;
-    top: 10%;
-    background: lightblue; border: 1px solid blue;
-    box-sizing: border-box; cursor: move;
-    display: flex; align-items: center; justify-content: center;
-    color: black;
-    border-radius: 10px;
-  }
-
-
-
-
-
-  .note::before, .note::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    width: 10px;
-    height: 100%;
-    cursor: ew-resize;
-  }
-
-  .note::before {
-    left: -5px;
-  }
-
-  .note::after {
-    right: -5px;
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  .color-swatch {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 1px solid #000;
-  }
-
-  .color-swatch[data-color="#ffb3c3"] { background-color: #ffb3c3; }
-  .color-swatch[data-color="#c3b3ff"] { background-color: #c3b3ff; }
-  .color-swatch[data-color="#b3ffc3"] { background-color: #b3ffc3; }
-  .color-swatch[data-color="#ffffb3"] { background-color: #ffffb3; }
-
-  .dropdown {
-    position: relative;
-    display: inline-block;
-  }
-
-  .dropdown-content {
-    display: none; /* Initially hidden */
-    position: absolute;
-    background-color: #f9f9f9;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
-    padding: 10px;
-  }
-
-  .dropdown-content.open {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  #swatches-container table {
-    border-collapse: collapse;
-  }
-
-  #swatches-container td {
-    vertical-align: top;
-    padding: 0 5px;
-  }
-
-  #predefined-colors-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(9, 1fr);
-    grid-auto-flow: column;
-    gap: 2px;
-  }
-
-  #recent-colors-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-
-  .dropdown-content .color-swatch {
-    margin: 5px;
-  }
-
-  #color-palette-btn {
-    background-color: #ffb3c3;
-  }
-
-
-  .color-swatch[data-color="#ffcbb3"] { background-color: #ffcbb3; }
-  .color-swatch[data-color="#b3e6ff"] { background-color: #b3e6ff; }
-  .color-swatch[data-color="#f0b3ff"] { background-color: #f0b3ff; }
-  .color-swatch[data-color="#b3ffeb"] { background-color: #b3ffeb; }
-  .color-swatch[data-color="#ffb3f0"] { background-color: #ffb3f0; }
-
-  /* Neon */
-  .color-swatch[data-color="#ff00ff"] { background-color: #ff00ff; }
-  .color-swatch[data-color="#00ffff"] { background-color: #00ffff; }
-  .color-swatch[data-color="#00ff00"] { background-color: #00ff00; }
-  .color-swatch[data-color="#ffff00"] { background-color: #ffff00; }
-  .color-swatch[data-color="#ff0000"] { background-color: #ff0000; }
-  .color-swatch[data-color="#0000ff"] { background-color: #0000ff; }
-  .color-swatch[data-color="#ff8000"] { background-color: #ff8000; }
-  .color-swatch[data-color="#8000ff"] { background-color: #8000ff; }
-  .color-swatch[data-color="#00ff80"] { background-color: #00ff80; }
-
-  /* High-contrast */
-  .color-swatch[data-color="#ffffff"] { background-color: #ffffff; }
-  .color-swatch[data-color="#000000"] { background-color: #000000; }
-  .color-swatch[data-color="#d62728"] { background-color: #d62728; }
-  .color-swatch[data-color="#1f77b4"] { background-color: #1f77b4; }
-  .color-swatch[data-color="#2ca02c"] { background-color: #2ca02c; }
-  .color-swatch[data-color="#ff7f0e"] { background-color: #ff7f0e; }
-  .color-swatch[data-color="#9467bd"] { background-color: #9467bd; }
-  .color-swatch[data-color="#8c564b"] { background-color: #8c564b; }
-  .color-swatch[data-color="#e377c2"] { background-color: #e377c2; }
-
-  #more-colors-btn {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 1px solid #000;
-    margin-left: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #custom-color-container {
-    position: relative;
-  }
-
-  #recent-colors-container {
-    display: contents;
-  }
-
-  #color-picker-wrapper {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 2;
-    background-color: #f9f9f9;
-    padding: 5px;
-    border: 1px solid #ccc;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  #custom-color-btn {
-    width: 100%;
-    padding: 5px;
-    border: none;
-    background-color: #f0f0f0;
-    cursor: pointer;
-  }
-
-/* Hide scrollbar for Chrome, Safari and Opera */
-::-webkit-scrollbar {
+#app-container::-webkit-scrollbar {
   display: none;
 }
 
-/* Hide scrollbar for IE, Edge and Firefox */
-* {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+.track {
+  display: flex;
+}
+
+.track-header {
+  width: 100px;
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: #333; /* to hide the content behind */
+}
+
+.key {
+  width: 100%;
+  height: 15px;
+  border: 1px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* align to the right */
+  box-sizing: border-box;
+}
+
+.key--white {
+  background-color: #fff;
+  color: #000;
+}
+
+.key--black {
+  background-color: #000;
+  color: #fff;
+}
+
+.timeline {
+  flex-grow: 1;
+  border-bottom: 1px solid #555;
+  background-image: linear-gradient(to right, #444 1px, transparent 1px);
+  background-size: 50px 100%;
+  min-width: 2000px;
+  height: 15px;
+  box-sizing: border-box;
+  position: relative; /* This is the fix */
+}
+
+.octave-separator {
+    height: 5px;
+    background-color: #1a1a1a;
+    border-top: 1px solid #666;
+    border-bottom: 1px solid #666;
+}
+
+.note {
+    position: absolute;
+    height: 80%;
+    top: 10%;
+    background-color: #aed9e0; /* A pleasant light blue */
+    border: 1px solid #5e8d9e; /* A darker, complementary border */
+    border-radius: 6px; /* Rounded sides */
+    box-sizing: border-box;
+    padding: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-family: sans-serif;
+    color: #1f2937;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: move;
+}
+  flex-grow: 1;
+  border-bottom: 1px solid #555;
+  background-image: linear-gradient(to right, #444 1px, transparent 1px);
+  background-size: 50px 100%;
+  min-width: 2000px;
+  height: 15px;
+  box-sizing: border-box;
 }
