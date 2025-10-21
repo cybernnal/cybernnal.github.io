@@ -15,16 +15,86 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPanning = false;
     let startX, startY;
     let scrollLeft, scrollTop;
+    let selectionBox = null;
+    let selectionStartX, selectionStartY;
 
     appContainer.addEventListener('mousedown', (e) => {
-        if (e.button !== 2) return; // only right-click
-        isPanning = true;
-        startX = e.pageX - appContainer.offsetLeft;
-        startY = e.pageY - appContainer.offsetTop;
-        scrollLeft = appContainer.scrollLeft;
-        scrollTop = appContainer.scrollTop;
-        appContainer.style.cursor = 'grabbing';
+        if (e.button === 2) { // Right-click for panning
+            isPanning = true;
+            startX = e.pageX - appContainer.offsetLeft;
+            startY = e.pageY - appContainer.offsetTop;
+            scrollLeft = appContainer.scrollLeft;
+            scrollTop = appContainer.scrollTop;
+            appContainer.style.cursor = 'grabbing';
+            return;
+        }
+
+        if (e.button === 0 && !e.target.classList.contains('note')) { // Left-click on empty area
+            // Clear previous selection if not holding shift
+            if (!e.shiftKey) {
+                document.querySelectorAll('.note.selected').forEach(n => n.classList.remove('selected'));
+            }
+
+            selectionStartX = e.clientX;
+            selectionStartY = e.clientY;
+
+            selectionBox = document.createElement('div');
+            selectionBox.id = 'selection-box';
+            appContainer.appendChild(selectionBox);
+
+            positionSelectionBox(e);
+
+            const onMouseMove = (moveEvent) => {
+                positionSelectionBox(moveEvent);
+            };
+
+            const onMouseUp = (upEvent) => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                selectNotesInBox(upEvent.shiftKey);
+                if (selectionBox) {
+                    appContainer.removeChild(selectionBox);
+                    selectionBox = null;
+                }
+            };
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
     });
+
+    function positionSelectionBox(e) {
+        if (!selectionBox) return;
+        const rect = appContainer.getBoundingClientRect();
+        const x = e.clientX - rect.left + appContainer.scrollLeft;
+        const y = e.clientY - rect.top + appContainer.scrollTop;
+        const startX = selectionStartX - rect.left + appContainer.scrollLeft;
+        const startY = selectionStartY - rect.top + appContainer.scrollTop;
+
+        const left = Math.min(x, startX);
+        const top = Math.min(y, startY);
+        const width = Math.abs(x - startX);
+        const height = Math.abs(y - startY);
+
+        selectionBox.style.left = left + 'px';
+        selectionBox.style.top = top + 'px';
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
+    }
+
+    function selectNotesInBox(shiftKey) {
+        if (!selectionBox) return;
+        const boxRect = selectionBox.getBoundingClientRect();
+        const notes = document.querySelectorAll('.note');
+
+        notes.forEach(note => {
+            const noteRect = note.getBoundingClientRect();
+            if (boxRect.left < noteRect.right && boxRect.right > noteRect.left &&
+                boxRect.top < noteRect.bottom && boxRect.bottom > noteRect.top) {
+                note.classList.add('selected');
+            }
+        });
+    }
 
     appContainer.addEventListener('mouseleave', () => {
         isPanning = false;
