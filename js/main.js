@@ -30,6 +30,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (e.button === 0 && !e.target.classList.contains('note')) { // Left-click on empty area
+            // Check for double-click before initiating selection box.
+            const now = Date.now();
+            const lastClick = parseFloat(appContainer.dataset.lastClick) || 0;
+            if (now - lastClick < 300) { // 300ms threshold for double-click
+                appContainer.dataset.lastClick = 0; // Reset for next click
+                return; // It's a double-click, so don't start selection.
+            }
+            appContainer.dataset.lastClick = now;
+
+
             // Clear previous selection if not holding shift
             if (!e.shiftKey) {
                 document.querySelectorAll('.note.selected').forEach(n => n.classList.remove('selected'));
