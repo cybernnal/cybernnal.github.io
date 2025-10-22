@@ -124,6 +124,14 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     track.dataset.pitch = fullPitchName;
     track.dataset.instrument = newInstrumentName;
 
+    track.addEventListener('mouseenter', () => {
+        track.classList.add('highlighted');
+    });
+
+    track.addEventListener('mouseleave', () => {
+        track.classList.remove('highlighted');
+    });
+
     const trackHeader = document.createElement('div');
     trackHeader.className = 'track-header';
 
@@ -292,7 +300,7 @@ MusicMaker.toggleTrackGroup = function(fullPitchName) {
 
 
 MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
-    noteElement.textContent = `${noteData.instrumentName[0]}${noteData.size[0]}`;
+    noteElement.textContent = noteData.instrumentName.substring(0, 3);
 
     const instrument = MusicMaker.instruments[noteData.instrumentName];
     const hue = instrument ? instrument.hue : 200;

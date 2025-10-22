@@ -124,8 +124,8 @@ html, body {
 
 .note {
     position: absolute;
-    height: 80%;
-    top: 10%;
+    height: 90%;
+    top: 5%;
     background-color: #aed9e0; /* A pleasant light blue */
     border: 1px solid #5e8d9e; /* A darker, complementary border */
     border-radius: 6px; /* Rounded sides */
@@ -140,6 +140,7 @@ html, body {
     overflow: hidden;
     white-space: nowrap;
     cursor: move;
+    line-height: 1; /* Added */
 }
 
 #selection-box {
@@ -186,4 +187,27 @@ html, body {
   max-width: 400px;
   text-align: center;
   color: #333;
+}
+
+.track.highlighted .key {
+    border: 2px solid #ffc107; /* Thicker and gold */
+    box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); /* Glowing effect */
+}
+
+.track.highlighted .key--white {
+    background-color: #fff8e1; /* Lighter yellow */
+}
+
+.track.highlighted .key--black {
+    background-color: #424242; /* Lighter black */
+}
+
+.track.highlighted .note {
+    color: #000;
+    font-weight: bold;
+}
+
+.track.highlighted .timeline {
+    border-top: 2px solid #ffc107;
+    border-bottom: 2px solid #ffc107;
 }
