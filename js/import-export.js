@@ -1,6 +1,6 @@
 var MusicMaker = MusicMaker || {};
 
-MusicMaker.importTracks = function() {
+MusicMaker.importTracks = function(beforeState) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.song,text/plain';
@@ -18,7 +18,7 @@ MusicMaker.importTracks = function() {
             MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
             MusicMaker.renderAllNotes(); // Render the new notes
             updateTimelineWidth(); // Update the timeline width to fit the imported song
-            MusicMaker.Storage.save(tracks, songTotalTime, songData.trackLayout, MusicMaker.instruments);
+            MusicMaker.commitChange(beforeState);
         };
         reader.readAsText(file);
     };

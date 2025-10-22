@@ -163,6 +163,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         deleteBtn.className = 'delete-btn';
         deleteBtn.innerHTML = '<b>X</b>';
         deleteBtn.onclick = () => {
+            const beforeState = MusicMaker.createSnapshot();
             const associatedNotes = tracks.filter(note => note.pitch === fullPitchName && note.instrumentName === newInstrumentName);
             const noteIdsToRemove = new Set(associatedNotes.map(n => n.id));
 
@@ -172,8 +173,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
             // Remove the track element from the DOM
             track.remove();
 
-            // Save the updated state
-            MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+            MusicMaker.commitChange(beforeState);
             
             const allTracks = Array.from(trackGroupContainer.querySelectorAll('.track'));
             const firstTrack = allTracks[0];
@@ -195,6 +195,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     timeline.dataset.instrument = newInstrumentName;
 
     timeline.addEventListener('dblclick', (e) => {
+        const beforeState = MusicMaker.createSnapshot();
         if (e.button !== 0) return;
         const startPosition = e.offsetX / stepWidth;
         const snappedStart = Math.round(startPosition / GRID_TIME_UNIT) * GRID_TIME_UNIT;
@@ -241,7 +242,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         MusicMaker.renderNote(newNote);
         MusicMaker.updateSongTotalTime();
         checkAndGrowTimeline(newNote);
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+        MusicMaker.commitChange(beforeState);
     });
 
     track.appendChild(trackHeader);
@@ -249,7 +250,8 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     trackGroupContainer.appendChild(track);
 
     if (isButton) {
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+        const beforeState = MusicMaker.createSnapshot();
+        MusicMaker.commitChange(beforeState);
     }
 
     // After adding, update the main track's expand button
@@ -353,6 +355,7 @@ MusicMaker.renderNote = function(note) {
         const lastRightClick = parseFloat(noteElement.dataset.lastRightClick) || 0;
 
         if (now - lastRightClick < 300) { // 300ms threshold for double-click
+            const beforeState = MusicMaker.createSnapshot();
             const clickedNote = e.target;
             if (clickedNote.classList.contains('selected')) {
                 const selectedNotes = document.querySelectorAll('.note.selected');
@@ -372,7 +375,7 @@ MusicMaker.renderNote = function(note) {
                 }
                 clickedNote.remove();
             }
-            MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+            MusicMaker.commitChange(beforeState);
             MusicMaker.updateSelectorToSelection();
         }
         noteElement.dataset.lastRightClick = now;
@@ -437,11 +440,12 @@ MusicMaker.renderNote = function(note) {
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
 
+                const beforeState = MusicMaker.createSnapshot();
                 initialPositions.forEach(pos => {
                     const finalLeft = pos.el.offsetLeft;
                     pos.note.start = finalLeft / stepWidth;
                 });
-                MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+                MusicMaker.commitChange(beforeState);
             }
 
             document.addEventListener('mousemove', onMouseMove);
@@ -559,6 +563,7 @@ MusicMaker.renderNote = function(note) {
             }
 
             function onMouseUp() {
+                const beforeState = MusicMaker.createSnapshot();
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
 
@@ -580,7 +585,7 @@ MusicMaker.renderNote = function(note) {
                 noteObject.start = snappedLeft / stepWidth;
                 noteObject.duration = snappedWidth / stepWidth;
                 MusicMaker.updateSongTotalTime();
-                MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+                MusicMaker.commitChange(beforeState);
             }
 
             document.addEventListener('mousemove', onMouseMove);
@@ -825,7 +830,7 @@ function findValidPastePosition(ghostNotes, baseTimeline, allTimelines, desiredD
     return bestDx;
 }
 
-MusicMaker.startPasting = function(notesToPaste) {
+MusicMaker.startPasting = function(notesToPaste, beforeState) {
     const appContainer = document.getElementById('app-container');
     let isPastePositionValid = true;
     let baseTimeline = null;
@@ -905,6 +910,7 @@ MusicMaker.startPasting = function(notesToPaste) {
     }
 
     function finalizePaste(e) {
+        const beforeState = MusicMaker.createSnapshot();
         if (!isPastePositionValid) {
             return cancelPaste();
         }
@@ -937,7 +943,7 @@ MusicMaker.startPasting = function(notesToPaste) {
             MusicMaker.renderNote(note);
         });
 
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+        MusicMaker.commitChange(beforeState);
 
         cleanup();
     }

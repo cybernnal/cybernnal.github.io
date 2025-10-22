@@ -2,6 +2,62 @@ let tracks = [];
 let songTotalTime = 0;
 var MusicMaker = MusicMaker || {};
 
+const UNDO_LIMIT = 20;
+let undoStack = [];
+let redoStack = [];
+
+MusicMaker.createSnapshot = function() {
+    return {
+        tracks: JSON.parse(JSON.stringify(tracks)),
+        songTotalTime: songTotalTime,
+        trackLayout: MusicMaker.getTrackLayout(),
+        instruments: JSON.parse(JSON.stringify(MusicMaker.instruments))
+    };
+}
+
+MusicMaker.commitChange = function(beforeState) {
+    if (undoStack.length >= UNDO_LIMIT) {
+        undoStack.shift(); // Remove the oldest state
+    }
+    undoStack.push(beforeState);
+    redoStack = []; // Clear redo stack on new change
+    MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+}
+
+MusicMaker.undo = function() {
+    if (undoStack.length > 0) {
+        const currentState = MusicMaker.createSnapshot();
+        redoStack.push(currentState);
+
+        const previousState = undoStack.pop();
+        MusicMaker.applyState(previousState);
+        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+    }
+}
+
+MusicMaker.redo = function() {
+    if (redoStack.length > 0) {
+        const currentState = MusicMaker.createSnapshot();
+        undoStack.push(currentState);
+
+        const nextState = redoStack.pop();
+        MusicMaker.applyState(nextState);
+        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+    }
+}
+
+MusicMaker.applyState = function(state) {
+    tracks = state.tracks;
+    songTotalTime = state.songTotalTime;
+    MusicMaker.instruments = state.instruments;
+
+    MusicMaker.createUI(state.trackLayout);
+    MusicMaker.populateInstrumentSelector();
+    MusicMaker.renderAllNotes();
+    updateTimelineWidth();
+}
+
+
 MusicMaker.updateSongTotalTime = function() {
     let maxTime = 0;
     tracks.forEach(note => {
@@ -37,11 +93,20 @@ document.addEventListener('DOMContentLoaded', () => {
         MusicMaker.renderAllNotes();
         updateTimelineWidth();
     }
+    
+    // Initial state for undo
+    undoStack.push(MusicMaker.createSnapshot());
 
-    document.getElementById('importBtn').addEventListener('click', MusicMaker.importTracks);
+    document.getElementById('importBtn').addEventListener('click', () => {
+        const beforeState = MusicMaker.createSnapshot();
+        MusicMaker.importTracks(beforeState);
+    });
     document.getElementById('exportBtn').addEventListener('click', () => {
         MusicMaker.exportTracks({ tracks: tracks, totalTime: songTotalTime });
     });
+    
+    document.getElementById('undoBtn').addEventListener('click', MusicMaker.undo);
+    document.getElementById('redoBtn').addEventListener('click', MusicMaker.redo);
 
     const resetBtn = document.getElementById('resetBtn');
     const resetModal = document.getElementById('reset-modal');
@@ -57,10 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     confirmResetBtn.addEventListener('click', () => {
+        const beforeState = MusicMaker.createSnapshot();
         MusicMaker.Storage.clear();
         tracks = [];
         songTotalTime = 0;
-        location.reload();
+        MusicMaker.createUI();
+        MusicMaker.populateInstrumentSelector();
+        updateTimelineWidth();
+        MusicMaker.commitChange(beforeState);
+        resetModal.style.display = 'none';
     });
 
     const appContainer = document.getElementById('app-container');
@@ -189,6 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('instrument-selector').addEventListener('change', (e) => {
+        const beforeState = MusicMaker.createSnapshot();
         const selectedInstrument = e.target.value;
         if (!selectedInstrument) return;
 
@@ -277,13 +348,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+        MusicMaker.commitChange(beforeState);
     });
 
     document.addEventListener('keydown', (e) => {
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const copyKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'c';
         const pasteKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'v';
+        const undoKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'z';
+        const redoKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'y';
 
         if (copyKeyPressed) {
             const selectedNotes = Array.from(document.querySelectorAll('.note.selected')).filter(n => {
@@ -328,8 +401,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (pasteKeyPressed) {
             const notesToPaste = MusicMaker.Clipboard.get();
             if (notesToPaste.length > 0) {
-                MusicMaker.startPasting(notesToPaste);
+                const beforeState = MusicMaker.createSnapshot();
+                MusicMaker.startPasting(notesToPaste, beforeState);
             }
+        } else if (undoKeyPressed) {
+            e.preventDefault();
+            MusicMaker.undo();
+        } else if (redoKeyPressed) {
+            e.preventDefault();
+            MusicMaker.redo();
         }
     });
 });
