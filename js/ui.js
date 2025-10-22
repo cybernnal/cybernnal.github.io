@@ -85,7 +85,41 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     const trackGroupContainer = container || document.querySelector(`.track-group-container[data-pitch="${fullPitchName}"]`);
     if (!trackGroupContainer) return;
 
-    const newInstrumentName = isButton ? 'diapason' : instrumentName;
+    let newInstrumentName;
+    if (isButton) {
+        const existingInstrumentElements = trackGroupContainer.querySelectorAll('.track');
+        const usedInstruments = Array.from(existingInstrumentElements).map(el => el.dataset.instrument);
+        const allInstruments = Object.keys(MusicMaker.instruments);
+        newInstrumentName = allInstruments.find(inst => !usedInstruments.includes(inst));
+
+        if (!newInstrumentName) {
+            let customInstrumentIndex = 1;
+            while (MusicMaker.instruments[`custom${customInstrumentIndex}`]) {
+                customInstrumentIndex++;
+            }
+            newInstrumentName = `custom${customInstrumentIndex}`;
+
+            const usedHues = Object.values(MusicMaker.instruments).map(inst => inst.hue);
+            let randomHue;
+            do {
+                randomHue = Math.floor(Math.random() * 360);
+            } while (usedHues.includes(randomHue));
+
+            MusicMaker.instruments[newInstrumentName] = {
+                sizes: ["tiny", "small", "medium", "large", "huge"],
+                hue: randomHue,
+                saturation: 70
+            };
+
+            const selector = document.getElementById('instrument-selector');
+            const option = document.createElement('option');
+            option.value = newInstrumentName;
+            option.textContent = newInstrumentName.charAt(0).toUpperCase() + newInstrumentName.slice(1);
+            selector.insertBefore(option, selector.lastChild);
+        }
+    } else {
+        newInstrumentName = instrumentName;
+    }
 
     const track = document.createElement('div');
     track.className = 'track';
@@ -158,12 +192,43 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         if (e.button !== 0) return;
         const startPosition = e.offsetX / stepWidth;
         const snappedStart = Math.round(startPosition / GRID_TIME_UNIT) * GRID_TIME_UNIT;
+
+        const notesOnTimeline = tracks.filter(n => n.pitch === fullPitchName && n.instrumentName === newInstrumentName);
+
+        const isColliding = (start, duration) => {
+            for (const note of notesOnTimeline) {
+                if (start < note.start + note.duration && start + duration > note.start) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        let finalStart = snappedStart;
+        if (isColliding(finalStart, 1)) {
+            let searchPos = finalStart;
+            while (isColliding(searchPos, 1)) {
+                const collidingNote = notesOnTimeline.find(note => searchPos < note.start + note.duration && searchPos + 1 > note.start);
+                if (collidingNote) {
+                    searchPos = collidingNote.start + collidingNote.duration;
+                } else {
+                    // Fallback, should not be reached if logic is correct
+                    searchPos += GRID_TIME_UNIT;
+                }
+            }
+            finalStart = searchPos;
+        }
+        
+        // Snap to grid
+        finalStart = Math.round(finalStart / GRID_TIME_UNIT) * GRID_TIME_UNIT;
+
+
         const newNote = {
             id: Date.now() + Math.random(),
             instrumentName: newInstrumentName,
             size: size,
             pitch: fullPitchName,
-            start: snappedStart,
+            start: finalStart,
             duration: 1
         };
         tracks.push(newNote);

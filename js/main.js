@@ -229,6 +229,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tracksToChange.forEach((originalInstrument, pitch) => {
             if (originalInstrument !== instrumentName) {
+                // Check if a track with the new instrument already exists for this pitch
+                const existingTrack = document.querySelector(`.track[data-pitch="${pitch}"][data-instrument="${instrumentName}"]`);
+                if (existingTrack) {
+                    alert(`A track for instrument '${instrumentName}' already exists for pitch '${pitch}'. Please choose a different instrument.`);
+                    // Reset the selector to the original instrument to avoid confusion
+                    document.getElementById('instrument-selector').value = originalInstrument;
+                    return; // Stop processing for this track
+                }
+
                 // Find all notes on this pitch with the original instrument
                 const notesOnTrack = tracks.filter(n => n.pitch === pitch && n.instrumentName === originalInstrument);
                 
