@@ -14,8 +14,6 @@ for (let octaveNum = 5; octaveNum >= 1; octaveNum--) {
 
 MusicMaker.instruments = {};
 
-const GRID_TIME_UNIT = 0.25;
-
 MusicMaker.populateInstrumentSelector = function() {
     const selector = document.getElementById('instrument-selector');
     selector.innerHTML = ''; // Clear existing options
@@ -233,6 +231,8 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         };
         tracks.push(newNote);
         MusicMaker.renderNote(newNote);
+        MusicMaker.updateSongTotalTime();
+        checkAndGrowTimeline(newNote);
         MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
     });
 
@@ -571,6 +571,7 @@ MusicMaker.renderNote = function(note) {
 
                 noteObject.start = snappedLeft / stepWidth;
                 noteObject.duration = snappedWidth / stepWidth;
+                MusicMaker.updateSongTotalTime();
                 MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
             }
 
@@ -964,3 +965,26 @@ MusicMaker.startPasting = function(notesToPaste) {
     document.addEventListener('mousedown', onMouseDown, true);
     document.addEventListener('keydown', onKeyDown);
 };
+function checkAndGrowTimeline(newNote) {
+    const noteEndTimeInUnits = newNote.start + newNote.duration;
+    const remainingTimeInUnits = songTotalTime - noteEndTimeInUnits;
+    const thresholdInUnits = AUTOGROW_THRESHOLD_SECONDS / TIME_UNIT_TO_SECONDS;
+
+    if (remainingTimeInUnits < thresholdInUnits) {
+        const growAmountInUnits = AUTOGROW_AMOUNT_SECONDS / TIME_UNIT_TO_SECONDS;
+        songTotalTime += growAmountInUnits;
+        updateTimelineWidth();
+    }
+}
+
+function updateTimelineWidth() {
+    const timelines = document.querySelectorAll('.timeline');
+    const separators = document.querySelectorAll('.octave-separator');
+    const newWidth = songTotalTime * stepWidth;
+    timelines.forEach(timeline => {
+        timeline.style.minWidth = newWidth + 'px';
+    });
+    separators.forEach(separator => {
+        separator.style.minWidth = (newWidth + TRACK_HEADER_WIDTH) + 'px';
+    });
+}

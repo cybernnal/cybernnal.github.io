@@ -14,8 +14,10 @@ MusicMaker.importTracks = function() {
             const songData = MusicMaker.parseAndLoadSong(content);
             tracks = songData.tracks;
             songTotalTime = songData.totalTime;
+            songTotalTime += AUTOGROW_AMOUNT_SECONDS / TIME_UNIT_TO_SECONDS; // Add 30s overhead
             MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
             MusicMaker.renderAllNotes(); // Render the new notes
+            updateTimelineWidth(); // Update the timeline width to fit the imported song
             MusicMaker.Storage.save(tracks, songTotalTime, songData.trackLayout, MusicMaker.instruments);
         };
         reader.readAsText(file);
@@ -33,6 +35,7 @@ MusicMaker.parseAndLoadSong = function(content) {
 
     const localTracks = [];
     let currentTime = 0;
+    let maxTime = 0; // To track the actual end time of the song
     const parts = content.trim().replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/);
     const trackLayout = {};
 
@@ -67,6 +70,8 @@ MusicMaker.parseAndLoadSong = function(content) {
             };
             localTracks.push(newNote);
 
+            maxTime = Math.max(maxTime, currentTime + duration); // Update maxTime
+
             if (!trackLayout[fullPitchName]) {
                 trackLayout[fullPitchName] = [];
             }
@@ -76,7 +81,7 @@ MusicMaker.parseAndLoadSong = function(content) {
         }
     });
 
-    return { tracks: localTracks, totalTime: currentTime, trackLayout: trackLayout };
+    return { tracks: localTracks, totalTime: maxTime, trackLayout: trackLayout };
 };
 
 MusicMaker.exportTracks = function(songData) {

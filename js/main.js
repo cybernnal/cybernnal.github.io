@@ -1,7 +1,17 @@
 let tracks = [];
 let songTotalTime = 0;
-let stepWidth = 20; // 1 duration unit = 20 pixels
-const TIME_UNIT_TO_MS = 100; // 1 duration unit = 100ms
+var MusicMaker = MusicMaker || {};
+
+MusicMaker.updateSongTotalTime = function() {
+    let maxTime = 0;
+    tracks.forEach(note => {
+        const endTime = note.start + note.duration;
+        if (endTime > maxTime) {
+            maxTime = endTime;
+        }
+    });
+    songTotalTime = maxTime;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedState = MusicMaker.Storage.load();
@@ -25,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tracks = savedState.tracks || [];
         songTotalTime = savedState.songTotalTime || 0;
         MusicMaker.renderAllNotes();
+        updateTimelineWidth();
     }
 
     document.getElementById('importBtn').addEventListener('click', MusicMaker.importTracks);
