@@ -97,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial state for undo
     undoStack.push(MusicMaker.createSnapshot());
 
+    document.getElementById('zoom-slider').value = stepWidth;
+
     document.getElementById('importBtn').addEventListener('click', () => {
         const beforeState = MusicMaker.createSnapshot();
         MusicMaker.importTracks(beforeState);

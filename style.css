@@ -18,6 +18,23 @@ html, body {
     background-color: #222;
 }
 
+#instrument-selector-container {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+
+#zoom-container {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+
+#zoom-slider {
+  width: 150px;
+  margin-left: 5px;
+}
+
 #app-container {
   height: 100vh;
   overflow: auto; /* single scrollbar */

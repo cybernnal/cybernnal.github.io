@@ -1,5 +1,18 @@
 var MusicMaker = MusicMaker || {};
 
+let stepWidth = 50;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const zoomSlider = document.getElementById('zoom-slider');
+    if (zoomSlider) {
+        zoomSlider.addEventListener('input', (e) => {
+            stepWidth = parseInt(e.target.value, 10);
+            updateTimelineWidth();
+            MusicMaker.renderAllNotes();
+        });
+    }
+});
+
 // The 13 pitches that make up a single user-defined "octave"
 const OCTAVE_PITCH_NAMES = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
 const SIZES = ['tiny', 'small', 'medium', 'large', 'huge'];
@@ -997,6 +1010,7 @@ function updateTimelineWidth() {
     const newWidth = songTotalTime * stepWidth;
     timelines.forEach(timeline => {
         timeline.style.minWidth = newWidth + 'px';
+        timeline.style.backgroundSize = stepWidth + 'px 100%';
     });
     separators.forEach(separator => {
         separator.style.minWidth = (newWidth + TRACK_HEADER_WIDTH) + 'px';
