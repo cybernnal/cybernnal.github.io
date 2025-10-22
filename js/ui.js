@@ -280,108 +280,10 @@ MusicMaker.renderNote = function(note) {
 
             function onMouseMove(moveEvent) {
                 const dx = moveEvent.pageX - initialX;
-                let bestDx = dx;
-                let moveNotes = true;
+                const targetTimeline = initialPositions[0].el.parentElement;
+                const finalDx = findValidDragPosition(initialPositions, dx, targetTimeline);
 
-                // Check if the current dx is valid
-                let collision = false;
-                for (const pos of initialPositions) {
-                    const newLeft = pos.left + dx;
-                    if (newLeft < 0) {
-                        collision = true;
-                        break;
-                    }
-                    const noteWidth = pos.el.offsetWidth;
-                    const timeline = pos.el.parentElement;
-                    const staticNotes = Array.from(timeline.children).filter(child => !child.classList.contains('selected'));
-                    for (const staticNote of staticNotes) {
-                        const staticLeft = staticNote.offsetLeft;
-                        const staticWidth = staticNote.offsetWidth;
-                        if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
-                            collision = true;
-                            break;
-                        }
-                    }
-                    if (collision) break;
-                }
-
-                if (collision) {
-                    // The desired position is not valid. Find the best valid one.
-                    const snapCandidates = [];
-
-                    // Add the "before" and "after" snap points for each colliding note
-                    for (const pos of initialPositions) {
-                        const newLeft = pos.left + dx;
-                        if (newLeft < 0) {
-                            snapCandidates.push(-pos.left);
-                        }
-                        const noteWidth = pos.el.offsetWidth;
-                        const timeline = pos.el.parentElement;
-                        const staticNotes = Array.from(timeline.children).filter(child => !child.classList.contains('selected'));
-                        for (const staticNote of staticNotes) {
-                            const staticLeft = staticNote.offsetLeft;
-                            const staticWidth = staticNote.offsetWidth;
-                            if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
-                                // Collision detected for this note. Add snap candidates.
-                                const snapDx1 = (staticLeft - noteWidth) - pos.left;
-                                const snapDx2 = (staticLeft + staticWidth) - pos.left;
-                                snapCandidates.push(snapDx1);
-                                snapCandidates.push(snapDx2);
-                            }
-                        }
-                    }
-
-                    let minDistance = Infinity;
-                    let foundSnap = false;
-
-                    for (const snapDx of snapCandidates) {
-                        let isSnapDxValid = true;
-                        // Check if this snapDx is valid for the whole block
-                        for (const pos of initialPositions) {
-                            const newLeft = pos.left + snapDx;
-                            if (newLeft < 0) {
-                                isSnapDxValid = false;
-                                break;
-                            }
-                            const noteWidth = pos.el.offsetWidth;
-                            const timeline = pos.el.parentElement;
-                            const staticNotes = Array.from(timeline.children).filter(child => !child.classList.contains('selected'));
-                            for (const staticNote of staticNotes) {
-                                const staticLeft = staticNote.offsetLeft;
-                                const staticWidth = staticNote.offsetWidth;
-                                if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
-                                    isSnapDxValid = false;
-                                    break;
-                                }
-                            }
-                            if (!isSnapDxValid) break;
-                        }
-
-                        if (isSnapDxValid) {
-                            foundSnap = true;
-                            const distance = Math.abs(dx - snapDx);
-                            if (distance < minDistance) {
-                                minDistance = distance;
-                                bestDx = snapDx;
-                            }
-                        }
-                    }
-                    if (!foundSnap) {
-                        moveNotes = false;
-                    }
-                }
-
-                if (moveNotes) {
-                    // Snap to grid
-                    const gridSizePixels = GRID_TIME_UNIT * stepWidth;
-                    const snappedDx = Math.round(bestDx / gridSizePixels) * gridSizePixels;
-                    let finalDx = bestDx;
-                    const snapTolerance = 4; // pixels
-
-                    if (Math.abs(bestDx - snappedDx) < snapTolerance) {
-                        finalDx = snappedDx;
-                    }
-
+                if (finalDx !== null) {
                     initialPositions.forEach(pos => {
                         pos.el.style.left = (pos.left + finalDx) + 'px';
                     });
@@ -546,4 +448,313 @@ MusicMaker.renderNote = function(note) {
 MusicMaker.renderAllNotes = function() {
     document.querySelectorAll('.note').forEach(el => el.remove());
     tracks.forEach(note => MusicMaker.renderNote(note));
+};
+
+function findValidDragPosition(initialPositions, dx, targetTimeline) {
+    let bestDx = dx;
+    let moveNotes = true;
+
+    let collision = false;
+    for (const pos of initialPositions) {
+        const newLeft = pos.left + dx;
+        if (newLeft < 0) {
+            collision = true;
+            break;
+        }
+        const noteWidth = pos.el.offsetWidth;
+        const staticNotes = Array.from(targetTimeline.children).filter(child => !child.classList.contains('selected') && !child.classList.contains('ghost-note'));
+        for (const staticNote of staticNotes) {
+            const staticLeft = staticNote.offsetLeft;
+            const staticWidth = staticNote.offsetWidth;
+            if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
+                collision = true;
+                break;
+            }
+        }
+        if (collision) break;
+    }
+
+    if (collision) {
+        const snapCandidates = [];
+        for (const pos of initialPositions) {
+            const newLeft = pos.left + dx;
+            if (newLeft < 0) {
+                snapCandidates.push(-pos.left);
+            }
+            const noteWidth = pos.el.offsetWidth;
+            const staticNotes = Array.from(targetTimeline.children).filter(child => !child.classList.contains('selected') && !child.classList.contains('ghost-note'));
+            for (const staticNote of staticNotes) {
+                const staticLeft = staticNote.offsetLeft;
+                const staticWidth = staticNote.offsetWidth;
+                if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
+                    snapCandidates.push((staticLeft - noteWidth) - pos.left);
+                    snapCandidates.push((staticLeft + staticWidth) - pos.left);
+                }
+            }
+        }
+
+        let minDistance = Infinity;
+        let foundSnap = false;
+        for (const snapDx of snapCandidates) {
+            let isSnapDxValid = true;
+            for (const pos of initialPositions) {
+                const newLeft = pos.left + snapDx;
+                if (newLeft < 0) {
+                    isSnapDxValid = false;
+                    break;
+                }
+                const noteWidth = pos.el.offsetWidth;
+                const staticNotes = Array.from(targetTimeline.children).filter(child => !child.classList.contains('selected') && !child.classList.contains('ghost-note'));
+                for (const staticNote of staticNotes) {
+                    const staticLeft = staticNote.offsetLeft;
+                    const staticWidth = staticNote.offsetWidth;
+                    if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
+                        isSnapDxValid = false;
+                        break;
+                    }
+                }
+                if (!isSnapDxValid) break;
+            }
+
+            if (isSnapDxValid) {
+                foundSnap = true;
+                const distance = Math.abs(dx - snapDx);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestDx = snapDx;
+                }
+            }
+        }
+        if (!foundSnap) {
+            moveNotes = false;
+        }
+    }
+
+    if (moveNotes) {
+        const gridSizePixels = GRID_TIME_UNIT * stepWidth;
+        const snappedDx = Math.round(bestDx / gridSizePixels) * gridSizePixels;
+        if (Math.abs(bestDx - snappedDx) < 4) {
+            return snappedDx;
+        }
+        return bestDx;
+    }
+
+    return null;
+}
+
+function findValidPastePosition(ghostNotes, baseTimeline, allTimelines, desiredDx) {
+    const baseTimelineIndex = allTimelines.indexOf(baseTimeline);
+
+    const checkPosition = (dx) => {
+        for (const gn of ghostNotes) {
+            const targetIndex = baseTimelineIndex + gn.data.trackOffset;
+            if (targetIndex < 0 || targetIndex >= allTimelines.length) {
+                return false;
+            }
+            const targetTimeline = allTimelines[targetIndex];
+            const newLeft = gn.data.start * stepWidth + dx;
+            const noteWidth = gn.el.offsetWidth;
+
+            if (newLeft < 0) return false;
+
+            const staticNotes = Array.from(targetTimeline.children).filter(child => !child.classList.contains('ghost-note'));
+            for (const staticNote of staticNotes) {
+                const staticLeft = staticNote.offsetLeft;
+                const staticWidth = staticNote.offsetWidth;
+                if (newLeft < staticLeft + staticWidth && newLeft + noteWidth > staticLeft) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+
+    if (checkPosition(desiredDx)) {
+        return desiredDx;
+    }
+
+    const snapCandidates = new Set();
+    for (const gn of ghostNotes) {
+        const targetIndex = baseTimelineIndex + gn.data.trackOffset;
+        if (targetIndex < 0 || targetIndex >= allTimelines.length) continue;
+
+        const targetTimeline = allTimelines[targetIndex];
+        const noteWidth = gn.el.offsetWidth;
+        const staticNotes = Array.from(targetTimeline.children).filter(child => !child.classList.contains('ghost-note'));
+
+        for (const staticNote of staticNotes) {
+            const staticLeft = staticNote.offsetLeft;
+            const staticWidth = staticNote.offsetWidth;
+            snapCandidates.add(staticLeft + staticWidth - (gn.data.start * stepWidth));
+            snapCandidates.add(staticLeft - noteWidth - (gn.data.start * stepWidth));
+        }
+        snapCandidates.add(-(gn.data.start * stepWidth));
+    }
+
+    let bestDx = null;
+    let minDistance = Infinity;
+
+    for (const candidateDx of snapCandidates) {
+        const gridSizePixels = GRID_TIME_UNIT * stepWidth;
+        const snappedDx = Math.round(candidateDx / gridSizePixels) * gridSizePixels;
+
+        if (checkPosition(snappedDx)) {
+            const distance = Math.abs(snappedDx - desiredDx);
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestDx = snappedDx;
+            }
+        }
+    }
+
+    return bestDx;
+}
+
+MusicMaker.startPasting = function(notesToPaste) {
+    const appContainer = document.getElementById('app-container');
+    let isPastePositionValid = true;
+    let baseTimeline = null;
+    let finalDx = 0;
+
+    const timelineHeight = 15;
+    const noteHeight = timelineHeight * 0.8;
+    const noteTopMargin = timelineHeight * 0.1;
+
+    const ghostNotes = notesToPaste.map(note => {
+        const noteElement = document.createElement('div');
+        noteElement.className = 'note ghost-note';
+        noteElement.style.width = (note.duration * stepWidth) + 'px';
+        noteElement.style.height = noteHeight + 'px';
+        noteElement.style.pointerEvents = 'none';
+        noteElement.style.backgroundColor = 'rgba(100, 100, 255, 0.5)';
+        noteElement.style.position = 'absolute';
+        noteElement.style.opacity = '0';
+        appContainer.appendChild(noteElement);
+        return { el: noteElement, data: note, currentTimeline: null };
+    });
+
+    function updateGhostNotesPosition(e) {
+        const allTimelines = Array.from(document.querySelectorAll('.timeline'));
+        const containerRect = appContainer.getBoundingClientRect();
+        const mouseX = e.clientX - containerRect.left + appContainer.scrollLeft;
+
+        let elementUnderMouse = document.elementFromPoint(e.clientX, e.clientY);
+        let timelineUnderMouse = elementUnderMouse ? elementUnderMouse.closest('.timeline') : null;
+
+        // Make vertical selection sticky: if mouse is off a track, use the last known one
+        if (timelineUnderMouse) {
+            baseTimeline = timelineUnderMouse;
+        }
+
+        if (!baseTimeline) {
+            ghostNotes.forEach(gn => gn.el.style.opacity = '0');
+            isPastePositionValid = false;
+            return;
+        }
+
+        const timelineRect = baseTimeline.getBoundingClientRect();
+        const timelineXStart = timelineRect.left - containerRect.left + appContainer.scrollLeft;
+        const mouseXInTimeline = mouseX - timelineXStart;
+
+        const firstNoteData = ghostNotes[0].data;
+        const desiredDxInTimeline = mouseXInTimeline - (firstNoteData.start * stepWidth);
+
+        const calculatedDx = findValidPastePosition(ghostNotes, baseTimeline, allTimelines, desiredDxInTimeline);
+
+        if (calculatedDx !== null) {
+            finalDx = calculatedDx;
+            isPastePositionValid = true;
+        } else {
+            finalDx = desiredDxInTimeline;
+            isPastePositionValid = false;
+        }
+
+        const baseTimelineIndex = allTimelines.indexOf(baseTimeline);
+        ghostNotes.forEach(gn => {
+            const targetIndex = baseTimelineIndex + gn.data.trackOffset;
+            if (targetIndex >= 0 && targetIndex < allTimelines.length) {
+                const targetTimeline = allTimelines[targetIndex];
+                const targetTimelineRect = targetTimeline.getBoundingClientRect();
+                const targetTimelineXStart = targetTimelineRect.left - containerRect.left + appContainer.scrollLeft;
+
+                gn.el.style.top = (targetTimelineRect.top - containerRect.top + appContainer.scrollTop + noteTopMargin) + 'px';
+                gn.el.style.left = (targetTimelineXStart + gn.data.start * stepWidth + finalDx) + 'px';
+                gn.el.style.opacity = '1';
+                gn.currentTimeline = targetTimeline;
+                gn.el.style.backgroundColor = isPastePositionValid ? 'rgba(100, 100, 255, 0.5)' : 'rgba(255, 100, 100, 0.5)';
+            } else {
+                gn.el.style.opacity = '0';
+                gn.currentTimeline = null;
+            }
+        });
+    }
+
+    function finalizePaste(e) {
+        if (!isPastePositionValid) {
+            return cancelPaste();
+        }
+
+        const newNotes = [];
+        const allTimelines = Array.from(document.querySelectorAll('.timeline'));
+        const finalValidationDx = findValidPastePosition(ghostNotes, baseTimeline, allTimelines, finalDx);
+
+        if (finalValidationDx === null) {
+             console.log("Final paste failed due to collision.");
+            return cancelPaste();
+        }
+
+        ghostNotes.forEach(ghostNote => {
+            if (ghostNote.currentTimeline) {
+                const noteData = ghostNote.data;
+                const newStart = (noteData.start * stepWidth + finalValidationDx) / stepWidth;
+                newNotes.push({
+                    id: Date.now() + Math.random(),
+                    instrumentName: ghostNote.currentTimeline.dataset.instrument,
+                    size: noteData.size,
+                    pitch: ghostNote.currentTimeline.parentElement.dataset.pitch,
+                    start: newStart,
+                    duration: noteData.duration
+                });
+            }
+        });
+
+        newNotes.forEach(note => {
+            tracks.push(note);
+            MusicMaker.renderNote(note);
+        });
+
+        cleanup();
+    }
+
+    function cancelPaste() {
+        console.log('Pasting cancelled.');
+        cleanup();
+    }
+
+    function cleanup() {
+        ghostNotes.forEach(gn => {
+            if (gn.el.parentElement) {
+                gn.el.parentElement.removeChild(gn.el);
+            }
+        });
+        document.removeEventListener('mousemove', updateGhostNotesPosition);
+        document.removeEventListener('mousedown', onMouseDown, true);
+        document.removeEventListener('keydown', onKeyDown);
+    }
+
+    function onMouseDown(e) {
+        if (e.button === 0) {
+            finalizePaste(e);
+        }
+    }
+
+    function onKeyDown(e) {
+        if (e.key === 'Escape') {
+            cancelPaste();
+        }
+    }
+
+    document.addEventListener('mousemove', updateGhostNotesPosition);
+    document.addEventListener('mousedown', onMouseDown, true);
+    document.addEventListener('keydown', onKeyDown);
 };

@@ -133,4 +133,49 @@ document.addEventListener('DOMContentLoaded', () => {
     appContainer.addEventListener('contextmenu', (e) => {
         e.preventDefault();
     });
+
+    document.addEventListener('keydown', (e) => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const copyKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'c';
+        const pasteKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'v';
+
+        if (copyKeyPressed) {
+            const selectedNotes = Array.from(document.querySelectorAll('.note.selected'));
+            if (selectedNotes.length === 0) return;
+
+            const allTimelines = Array.from(document.querySelectorAll('.timeline'));
+            const selectedNoteData = [];
+
+            for (const noteElement of selectedNotes) {
+                const noteId = noteElement.dataset.noteId;
+                const noteData = tracks.find(n => String(n.id) === noteId);
+                if (noteData) {
+                    const timeline = noteElement.closest('.timeline');
+                    const trackIndex = allTimelines.indexOf(timeline);
+                    selectedNoteData.push({ ...noteData, trackIndex });
+                }
+            }
+
+            if (selectedNoteData.length > 0) {
+                selectedNoteData.sort((a, b) => a.trackIndex - b.trackIndex || a.start - b.start);
+                const baseNote = selectedNoteData[0];
+
+                const clipboardData = selectedNoteData.map(note => ({
+                    instrumentName: note.instrumentName,
+                    size: note.size,
+                    start: note.start - baseNote.start, // Relative horizontal start
+                    duration: note.duration,
+                    trackOffset: note.trackIndex - baseNote.trackIndex // Relative vertical position
+                }));
+
+                MusicMaker.Clipboard.set(clipboardData);
+                console.log('Notes copied to clipboard:', clipboardData);
+            }
+        } else if (pasteKeyPressed) {
+            const notesToPaste = MusicMaker.Clipboard.get();
+            if (notesToPaste.length > 0) {
+                MusicMaker.startPasting(notesToPaste);
+            }
+        }
+    });
 });
