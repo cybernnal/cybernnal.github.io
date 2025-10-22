@@ -1,0 +1,31 @@
+Sizes:
+t | tiny
+s | small
+m | medium
+l | large
+h | huge
+ 
+Instruments:
+d | diapason all
+g | gamba all
+w | steam whistle large medium small
+n | nasard all
+t | trompette all
+b | subbass huge large medium snall
+v | vox humana all
+k | gedeckt all
+p | posaune huge large medium small
+o | piccolo all
+ 
+Special:
+x | silence
+ 
+Notes:
+F#, F, E, D#, D, C#, C, B, A#, A, G#, G, LF#
+
+LF# stand for Low pitch F#
+
+For example:
+hdA.4 x.4 tgE.5 x.2 tgD.3
+
+in this exemple it is read, huge diapason play a A for 4 delay of 4 to match the note duration, tiny gamba play for 5, a delay of 2 then tiny gamba D play for 3, since tgE player 5 with a delay of only 2, it will play alone for 2 then they will both play for 3

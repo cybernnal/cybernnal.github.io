@@ -4,12 +4,13 @@ MusicMaker.Storage = (function() {
 
     const STORAGE_KEY = 'musicMakerState';
 
-    function saveState(tracks, songTotalTime, trackLayout) {
+    function saveState(tracks, songTotalTime, trackLayout, instruments) {
         try {
             const state = {
                 tracks: tracks,
                 songTotalTime: songTotalTime,
-                trackLayout: trackLayout
+                trackLayout: trackLayout,
+                instruments: instruments
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (e) {

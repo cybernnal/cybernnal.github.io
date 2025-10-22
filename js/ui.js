@@ -4,21 +4,40 @@ var MusicMaker = MusicMaker || {};
 const OCTAVE_PITCH_NAMES = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
 const SIZES = ['tiny', 'small', 'medium', 'large', 'huge'];
 
-// Base Hues (0-360) for each instrument
-const INSTRUMENT_HUES = {
-    'diapason': 210, // blue
-    'gamba': 140,    // green
-    'steam whistle': 30, // orange
-    'nasard': 280,   // purple
-    'trompette': 0,      // red
-    'subbass': 170,    // teal
-    'vox humana': 330,   // pink
-    'gedeckt': 50,     // yellow
-    'posaune': 30,     // brown (orange hue, lower saturation)
-    'piccolo': 190     // cyan
-};
+// Create a master list of all pitches from highest to lowest for continuous color gradient
+const ALL_PITCH_NAMES = [];
+for (let octaveNum = 5; octaveNum >= 1; octaveNum--) {
+    OCTAVE_PITCH_NAMES.forEach(pitchName => {
+        ALL_PITCH_NAMES.push(pitchName + octaveNum);
+    });
+}
+
+MusicMaker.instruments = {};
 
 const GRID_TIME_UNIT = 0.25;
+
+MusicMaker.populateInstrumentSelector = function() {
+    const selector = document.getElementById('instrument-selector');
+    selector.innerHTML = ''; // Clear existing options
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Select Instrument';
+    selector.appendChild(defaultOption);
+
+    for (const instrumentName in MusicMaker.instruments) {
+        const option = document.createElement('option');
+        option.value = instrumentName;
+        option.textContent = instrumentName.charAt(0).toUpperCase() + instrumentName.slice(1);
+        selector.appendChild(option);
+    }
+
+    const customOption = document.createElement('option');
+    customOption.value = 'custom';
+    customOption.textContent = 'Custom';
+    selector.appendChild(customOption);
+};
+
 
 MusicMaker.createUI = function(trackLayout = null) {
     const appContainer = document.getElementById('app-container');
@@ -71,6 +90,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     const track = document.createElement('div');
     track.className = 'track';
     track.dataset.pitch = fullPitchName;
+    track.dataset.instrument = newInstrumentName;
 
     const trackHeader = document.createElement('div');
     trackHeader.className = 'track-header';
@@ -103,9 +123,17 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         deleteBtn.className = 'delete-btn';
         deleteBtn.innerHTML = '<b>X</b>';
         deleteBtn.onclick = () => {
+            const associatedNotes = tracks.filter(note => note.pitch === fullPitchName && note.instrumentName === newInstrumentName);
+            const noteIdsToRemove = new Set(associatedNotes.map(n => n.id));
+
+            // Remove notes from the main tracks array
+            tracks = tracks.filter(note => !noteIdsToRemove.has(note.id));
+
+            // Remove the track element from the DOM
             track.remove();
-            tracks = tracks.filter(note => !(note.pitch === fullPitchName && note.instrumentName === newInstrumentName));
-            MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+
+            // Save the updated state
+            MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
             
             const allTracks = Array.from(trackGroupContainer.querySelectorAll('.track'));
             const firstTrack = allTracks[0];
@@ -140,7 +168,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         };
         tracks.push(newNote);
         MusicMaker.renderNote(newNote);
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
     });
 
     track.appendChild(trackHeader);
@@ -148,7 +176,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     trackGroupContainer.appendChild(track);
 
     if (isButton) {
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
     }
 
     // After adding, update the main track's expand button
@@ -198,26 +226,48 @@ MusicMaker.toggleTrackGroup = function(fullPitchName) {
 };
 
 
+MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
+    noteElement.textContent = `${noteData.instrumentName[0]}${noteData.size[0]}`;
+
+    const instrument = MusicMaker.instruments[noteData.instrumentName];
+    const hue = instrument ? instrument.hue : 200;
+    const saturation = instrument ? instrument.saturation : 70;
+
+    const overallPitchIndex = ALL_PITCH_NAMES.indexOf(noteData.pitch);
+    const totalPitches = ALL_PITCH_NAMES.length;
+
+    const maxLightness = 90;
+    const minLightness = 25;
+    const lightnessRange = maxLightness - minLightness;
+
+    // Map the pitch index (0 to totalPitches-1) to the lightness range
+    const lightness = maxLightness - (overallPitchIndex / (totalPitches - 1)) * lightnessRange;
+
+    noteElement.style.backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    noteElement.style.borderColor = `hsl(${hue}, ${saturation}%, ${lightness - 20}%)`;
+};
+
 MusicMaker.renderNote = function(note) {
-    const timeline = document.querySelector(`.track[data-pitch="${note.pitch}"] .timeline[data-instrument="${note.instrumentName}"]`);
+    let timeline = document.querySelector(`.track[data-pitch="${note.pitch}"][data-instrument="${note.instrumentName}"] .timeline`);
+    
+    // If timeline doesn't exist, create it on the fly
     if (!timeline) {
-        console.warn(`Timeline not found for note:`, note);
+        const size = SIZES.find((s, i) => note.pitch.endsWith(String(5 - i)));
+        if (size) {
+            MusicMaker.addTrack(note.pitch, size, false, null, note.instrumentName);
+            timeline = document.querySelector(`.track[data-pitch="${note.pitch}"][data-instrument="${note.instrumentName}"] .timeline`);
+        }
+    }
+
+    if (!timeline) {
+        console.warn(`Timeline not found for note and could not be created:`, note);
         return;
     }
 
     const noteElement = document.createElement('div');
     noteElement.className = 'note';
-    noteElement.textContent = `${note.instrumentName[0]}${note.size[0]}`;
+    MusicMaker.updateNoteAppearance(noteElement, note);
 
-    // --- Color Calculation Logic ---
-    const hue = INSTRUMENT_HUES[note.instrumentName] || 200; // Default to a neutral blue
-    const pitchIndex = OCTAVE_PITCH_NAMES.indexOf(note.pitch.slice(0, -1));
-    const lightness = 85 - (pitchIndex * 3.5);
-    const saturation = (note.instrumentName === 'posaune') ? 40 : 70; // Lower saturation for Posaune
-
-    noteElement.style.backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    noteElement.style.borderColor = `hsl(${hue}, ${saturation}%, ${lightness - 20}%)`; // Darker border
-    // --- End of Color Logic ---
 
     noteElement.style.left = (note.start * stepWidth) + 'px';
     noteElement.style.width = (note.duration * stepWidth) + 'px';
@@ -249,7 +299,8 @@ MusicMaker.renderNote = function(note) {
                 }
                 clickedNote.remove();
             }
-            MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+            MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+            MusicMaker.updateSelectorToSelection();
         }
         noteElement.dataset.lastRightClick = now;
     });
@@ -279,6 +330,7 @@ MusicMaker.renderNote = function(note) {
                 noteElement.classList.add('selected');
             }
         }
+        MusicMaker.updateSelectorToSelection();
         // --- End Selection Logic ---
 
         const initialX = e.pageX;
@@ -316,7 +368,7 @@ MusicMaker.renderNote = function(note) {
                     const finalLeft = pos.el.offsetLeft;
                     pos.note.start = finalLeft / stepWidth;
                 });
-                MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+                MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
             }
 
             document.addEventListener('mousemove', onMouseMove);
@@ -454,7 +506,7 @@ MusicMaker.renderNote = function(note) {
 
                 noteObject.start = snappedLeft / stepWidth;
                 noteObject.duration = snappedWidth / stepWidth;
-                MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+                MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
             }
 
             document.addEventListener('mousemove', onMouseMove);
@@ -490,6 +542,53 @@ MusicMaker.getTrackLayout = function() {
         }
     });
     return layout;
+};
+
+MusicMaker.comparePitches = function(pitchA, pitchB) {
+    const octaveA = parseInt(pitchA.slice(-1));
+    const octaveB = parseInt(pitchB.slice(-1));
+
+    if (octaveA !== octaveB) {
+        return octaveA - octaveB; // Higher octave number is higher pitch
+    }
+
+    const nameA = pitchA.slice(0, -1);
+    const nameB = pitchB.slice(0, -1);
+
+    const indexA = OCTAVE_PITCH_NAMES.indexOf(nameA);
+    const indexB = OCTAVE_PITCH_NAMES.indexOf(nameB);
+
+    // Lower index in OCTAVE_PITCH_NAMES is higher pitch
+    return indexB - indexA;
+};
+
+MusicMaker.updateSelectorToSelection = function() {
+    const selector = document.getElementById('instrument-selector');
+    const selectedNoteElements = document.querySelectorAll('.note.selected');
+
+    if (selectedNoteElements.length === 0) {
+        selector.value = ''; // Reset to default
+        return;
+    }
+
+    const selectedNotesData = [];
+    selectedNoteElements.forEach(el => {
+        const note = tracks.find(n => String(n.id) === el.dataset.noteId);
+        if (note) {
+            selectedNotesData.push(note);
+        }
+    });
+
+    if (selectedNotesData.length === 0) {
+        selector.value = '';
+        return;
+    }
+
+    // Sort by pitch to find the highest one
+    selectedNotesData.sort((a, b) => MusicMaker.comparePitches(b.pitch, a.pitch));
+
+    const highestPitchNote = selectedNotesData[0];
+    selector.value = highestPitchNote.instrumentName;
 };
 
 function findValidDragPosition(initialPositions, dx, targetTimeline) {
@@ -764,7 +863,7 @@ MusicMaker.startPasting = function(notesToPaste) {
             MusicMaker.renderNote(note);
         });
 
-        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
+        MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
 
         cleanup();
     }
