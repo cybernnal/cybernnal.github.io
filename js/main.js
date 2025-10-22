@@ -4,11 +4,43 @@ let stepWidth = 20; // 1 duration unit = 20 pixels
 const TIME_UNIT_TO_MS = 100; // 1 duration unit = 100ms
 
 document.addEventListener('DOMContentLoaded', () => {
-    MusicMaker.createUI();
+    const savedState = MusicMaker.Storage.load();
+    let trackLayout = null;
+    if (savedState && savedState.trackLayout) {
+        trackLayout = savedState.trackLayout;
+    }
+
+    MusicMaker.createUI(trackLayout);
+
+    if (savedState) {
+        tracks = savedState.tracks || [];
+        songTotalTime = savedState.songTotalTime || 0;
+        MusicMaker.renderAllNotes();
+    }
 
     document.getElementById('importBtn').addEventListener('click', MusicMaker.importTracks);
     document.getElementById('exportBtn').addEventListener('click', () => {
         MusicMaker.exportTracks({ tracks: tracks, totalTime: songTotalTime });
+    });
+
+    const resetBtn = document.getElementById('resetBtn');
+    const resetModal = document.getElementById('reset-modal');
+    const confirmResetBtn = document.getElementById('confirmReset');
+    const cancelResetBtn = document.getElementById('cancelReset');
+
+    resetBtn.addEventListener('click', () => {
+        resetModal.style.display = 'flex';
+    });
+
+    cancelResetBtn.addEventListener('click', () => {
+        resetModal.style.display = 'none';
+    });
+
+    confirmResetBtn.addEventListener('click', () => {
+        MusicMaker.Storage.clear();
+        tracks = [];
+        songTotalTime = 0;
+        location.reload();
     });
 
     const appContainer = document.getElementById('app-container');

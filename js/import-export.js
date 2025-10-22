@@ -16,6 +16,7 @@ MusicMaker.importTracks = function() {
             songTotalTime = songData.totalTime;
             MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
             MusicMaker.renderAllNotes(); // Render the new notes
+            MusicMaker.Storage.save(tracks, songTotalTime, songData.trackLayout);
         };
         reader.readAsText(file);
     };
