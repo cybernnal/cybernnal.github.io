@@ -15,6 +15,10 @@ MusicMaker.importTracks = function(beforeState) {
             tracks = songData.tracks;
             songTotalTime = songData.totalTime;
             songTotalTime += AUTOGROW_AMOUNT_SECONDS / TIME_UNIT_TO_SECONDS; // Add 30s overhead
+
+            const bestTempo = MusicMaker.findBestTempo(songData.allDurations);
+            MusicMaker.setTempo(bestTempo);
+
             MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
             MusicMaker.renderAllNotes(); // Render the new notes
             updateTimelineWidth(); // Update the timeline width to fit the imported song
@@ -34,6 +38,7 @@ MusicMaker.parseAndLoadSong = function(content) {
     };
 
     const localTracks = [];
+    const allDurations = [];
     let currentTime = 0;
     let maxTime = 0; // To track the actual end time of the song
     const parts = content.trim().replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/);
@@ -48,6 +53,7 @@ MusicMaker.parseAndLoadSong = function(content) {
         if (isNaN(duration)) {
             throw new Error(`Invalid number format in part: ${part}`);
         }
+        allDurations.push(duration);
 
         if (noteInfo.toLowerCase() === 'x') {
             currentTime += duration;
@@ -81,7 +87,7 @@ MusicMaker.parseAndLoadSong = function(content) {
         }
     });
 
-    return { tracks: localTracks, totalTime: maxTime, trackLayout: trackLayout };
+    return { tracks: localTracks, totalTime: maxTime, trackLayout: trackLayout, allDurations: allDurations };
 };
 
 MusicMaker.exportTracks = function(songData) {
@@ -116,7 +122,7 @@ MusicMaker.exportTracks = function(songData) {
     timeKeys.forEach(time => {
         const delay = time - lastTime;
         if (delay > 0) {
-            exportParts.push(`x,${delay}`);
+            exportParts.push(`x,${Number(delay.toFixed(2))}`);
         }
 
         const notesAtTime = groupedByTime[time];
@@ -126,7 +132,7 @@ MusicMaker.exportTracks = function(songData) {
             const size = octaveToSize[octave];
             const sizeCode = sizeReverseMap[size];
             const instrumentCode = instrumentReverseMap[note.instrumentName];
-            exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${note.duration}`);
+            exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
         });
 
         lastTime = time;
@@ -134,7 +140,7 @@ MusicMaker.exportTracks = function(songData) {
 
     const finalDelay = totalTime - lastTime;
     if (finalDelay > 0) {
-        exportParts.push(`x,${finalDelay}`);
+        exportParts.push(`x,${Number(finalDelay.toFixed(2))}`);
     }
 
     let result = '';

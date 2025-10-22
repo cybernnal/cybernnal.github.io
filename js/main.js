@@ -58,6 +58,41 @@ MusicMaker.applyState = function(state) {
 }
 
 
+MusicMaker.findBestTempo = function(durations) {
+    const epsilon = 0.02; // Using a slightly larger epsilon for checks
+    const isMultiple = (num, base) => Math.abs(num - Math.round(num / base) * base) < epsilon;
+
+    let has_thirds = false;
+    let has_quarters = false;
+    let has_halfs = false;
+
+    for (const d of durations) {
+        if (d <= 0) continue;
+
+        const isQuarter = isMultiple(d, 0.25);
+        const isHalf = isMultiple(d, 0.5);
+        // Check for thirds, but exclude values that are also halves (like 1.5 which is 3/2 but also 4.5/3)
+        const isThird = isMultiple(d * 3, 1) && !isHalf;
+        const isInteger = isMultiple(d, 1);
+
+        if (isThird) {
+            has_thirds = true;
+            break; // This is the most restrictive, so we can stop.
+        }
+        if (isQuarter && !isHalf) {
+            has_quarters = true;
+        }
+        if (isHalf && !isInteger) {
+            has_halfs = true;
+        }
+    }
+
+    if (has_thirds) return 3;
+    if (has_quarters) return 4;
+    if (has_halfs) return 2;
+    return 1;
+}
+
 MusicMaker.updateSongTotalTime = function() {
     let maxTime = 0;
     tracks.forEach(note => {

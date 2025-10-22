@@ -30,6 +30,22 @@ html, body {
   margin-left: 10px;
 }
 
+#tempo-container {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+
+#tempo-slider {
+  width: 150px;
+  margin-left: 5px;
+}
+
+#tempo-value {
+  margin-left: 5px;
+  font-weight: bold;
+}
+
 #zoom-slider {
   width: 150px;
   margin-left: 5px;

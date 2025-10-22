@@ -1,8 +1,57 @@
 var MusicMaker = MusicMaker || {};
 
 let stepWidth = 50;
+let minNoteDuration = 1;
+
+const tempo3Durations = [];
+for (let i = 1; i <= 300; i++) { // Generate for durations up to 100
+    tempo3Durations.push(Math.floor(i / 3 * 100) / 100);
+    if (i <= 200) {
+        tempo3Durations.push(i / 2);
+    }
+}
+const uniqueSortedTempo3Durations = [...new Set(tempo3Durations)].sort((a, b) => a - b).filter(d => d > 0);
+
+function snapToTempo3Grid(duration) {
+    if (duration <= 0) return uniqueSortedTempo3Durations[0];
+    // find closest value in uniqueSortedTempo3Durations
+    let closest = uniqueSortedTempo3Durations[0];
+    let minDiff = Math.abs(duration - closest);
+    for (const val of uniqueSortedTempo3Durations) {
+        const diff = Math.abs(duration - val);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closest = val;
+        }
+    }
+    return closest;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
+    const tempoSlider = document.getElementById('tempo-slider');
+    const tempoValue = document.getElementById('tempo-value');
+
+    if (tempoSlider) {
+        tempoSlider.addEventListener('input', (e) => {
+            const tempo = parseInt(e.target.value, 10);
+            tempoValue.textContent = tempo;
+            switch (tempo) {
+                case 1:
+                    minNoteDuration = 1;
+                    break;
+                case 2:
+                    minNoteDuration = 0.5;
+                    break;
+                case 3:
+                    minNoteDuration = 0.33;
+                    break;
+                case 4:
+                    minNoteDuration = 0.25;
+                    break;
+            }
+        });
+    }
+
     const zoomSlider = document.getElementById('zoom-slider');
     if (zoomSlider) {
         zoomSlider.addEventListener('input', (e) => {
@@ -225,10 +274,10 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         };
 
         let finalStart = snappedStart;
-        if (isColliding(finalStart, 1)) {
+        if (isColliding(finalStart, minNoteDuration)) {
             let searchPos = finalStart;
-            while (isColliding(searchPos, 1)) {
-                const collidingNote = notesOnTimeline.find(note => searchPos < note.start + note.duration && searchPos + 1 > note.start);
+            while (isColliding(searchPos, minNoteDuration)) {
+                const collidingNote = notesOnTimeline.find(note => searchPos < note.start + note.duration && searchPos + minNoteDuration > note.start);
                 if (collidingNote) {
                     searchPos = collidingNote.start + collidingNote.duration;
                 } else {
@@ -249,7 +298,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
             size: size,
             pitch: fullPitchName,
             start: finalStart,
-            duration: 1
+            duration: minNoteDuration
         };
         tracks.push(newNote);
         MusicMaker.renderNote(newNote);
@@ -477,19 +526,25 @@ MusicMaker.renderNote = function(note) {
                 const dx = moveEvent.pageX - initialX;
                 let newLeft = initialLeft;
                 let newWidth = initialWidth;
-                const gridSizePixels = GRID_TIME_UNIT * stepWidth;
+                const positionGridSizePixels = GRID_TIME_UNIT * stepWidth;
+                const durationGridSizePixels = minNoteDuration * stepWidth;
 
                 if (isResizingRight) {
                     newWidth = initialWidth + dx;
-                    const roundedRight = Math.round((initialLeft + newWidth) / gridSizePixels) * gridSizePixels;
-                    const snapTolerance = 4;
-                    if (Math.abs((initialLeft + newWidth) - roundedRight) < snapTolerance) {
-                        newWidth = roundedRight - initialLeft;
+                    let snappedWidth;
+                    if (minNoteDuration === 0.33) {
+                        const newDuration = newWidth / stepWidth;
+                        const snappedDuration = snapToTempo3Grid(newDuration);
+                        snappedWidth = snappedDuration * stepWidth;
+                    } else {
+                        const durationGridSizePixels = minNoteDuration * stepWidth;
+                        snappedWidth = Math.round(newWidth / durationGridSizePixels) * durationGridSizePixels;
                     }
+                    newWidth = snappedWidth;
                 } else if (isResizingLeft) {
                     newLeft = initialLeft + dx;
                     newWidth = initialWidth - dx;
-                    const roundedLeft = Math.round(newLeft / gridSizePixels) * gridSizePixels;
+                    const roundedLeft = Math.round(newLeft / positionGridSizePixels) * positionGridSizePixels;
                     const snapTolerance = 4;
                     if (Math.abs(newLeft - roundedLeft) < snapTolerance) {
                         newWidth = (initialLeft + initialWidth) - roundedLeft;
@@ -587,10 +642,19 @@ MusicMaker.renderNote = function(note) {
 
                 const finalLeft = noteElement.offsetLeft;
                 const finalWidth = noteElement.offsetWidth;
-                const gridSizePixels = GRID_TIME_UNIT * stepWidth;
+                const positionGridSizePixels = GRID_TIME_UNIT * stepWidth;
 
-                const snappedLeft = Math.round(finalLeft / gridSizePixels) * gridSizePixels;
-                const snappedWidth = Math.round(finalWidth / gridSizePixels) * gridSizePixels;
+                const snappedLeft = Math.round(finalLeft / positionGridSizePixels) * positionGridSizePixels;
+                let snappedWidth;
+
+                if (minNoteDuration === 0.33) {
+                    const finalDuration = finalWidth / stepWidth;
+                    const snappedDuration = snapToTempo3Grid(finalDuration);
+                    snappedWidth = snappedDuration * stepWidth;
+                } else {
+                    const durationGridSizePixels = minNoteDuration * stepWidth;
+                    snappedWidth = Math.round(finalWidth / durationGridSizePixels) * durationGridSizePixels;
+                }
 
                 noteElement.style.left = snappedLeft + 'px';
                 noteElement.style.width = snappedWidth + 'px';
@@ -1015,4 +1079,15 @@ function updateTimelineWidth() {
     separators.forEach(separator => {
         separator.style.minWidth = (newWidth + TRACK_HEADER_WIDTH) + 'px';
     });
+}
+
+MusicMaker.setTempo = function(tempo) {
+    const tempoSlider = document.getElementById('tempo-slider');
+    const tempoValue = document.getElementById('tempo-value');
+    if (tempoSlider) {
+        tempoSlider.value = tempo;
+        tempoValue.textContent = tempo;
+        // Manually trigger the input event to update minNoteDuration
+        tempoSlider.dispatchEvent(new Event('input'));
+    }
 }
