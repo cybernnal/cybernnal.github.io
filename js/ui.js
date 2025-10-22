@@ -634,7 +634,7 @@ MusicMaker.startPasting = function(notesToPaste) {
     });
 
     function updateGhostNotesPosition(e) {
-        const allTimelines = Array.from(document.querySelectorAll('.timeline'));
+        const allTimelines = Array.from(document.querySelectorAll('.timeline')).filter(tl => tl.offsetParent !== null);
         const containerRect = appContainer.getBoundingClientRect();
         const mouseX = e.clientX - containerRect.left + appContainer.scrollLeft;
 
@@ -695,11 +695,10 @@ MusicMaker.startPasting = function(notesToPaste) {
         }
 
         const newNotes = [];
-        const allTimelines = Array.from(document.querySelectorAll('.timeline'));
+        const allTimelines = Array.from(document.querySelectorAll('.timeline')).filter(tl => tl.offsetParent !== null);
         const finalValidationDx = findValidPastePosition(ghostNotes, baseTimeline, allTimelines, finalDx);
 
         if (finalValidationDx === null) {
-             console.log("Final paste failed due to collision.");
             return cancelPaste();
         }
 
@@ -727,7 +726,6 @@ MusicMaker.startPasting = function(notesToPaste) {
     }
 
     function cancelPaste() {
-        console.log('Pasting cancelled.');
         cleanup();
     }
 

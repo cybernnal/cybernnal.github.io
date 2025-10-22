@@ -140,10 +140,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const pasteKeyPressed = (isMac ? e.metaKey : e.ctrlKey) && e.key === 'v';
 
         if (copyKeyPressed) {
-            const selectedNotes = Array.from(document.querySelectorAll('.note.selected'));
+            const selectedNotes = Array.from(document.querySelectorAll('.note.selected')).filter(n => {
+                const rect = n.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+            });
             if (selectedNotes.length === 0) return;
 
-            const allTimelines = Array.from(document.querySelectorAll('.timeline'));
+            const allTimelines = Array.from(document.querySelectorAll('.timeline')).filter(tl => {
+                const rect = tl.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+            });
             const selectedNoteData = [];
 
             for (const noteElement of selectedNotes) {
@@ -152,7 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (noteData) {
                     const timeline = noteElement.closest('.timeline');
                     const trackIndex = allTimelines.indexOf(timeline);
-                    selectedNoteData.push({ ...noteData, trackIndex });
+                    // Only include notes that are on a currently visible timeline
+                    if (trackIndex > -1) {
+                        selectedNoteData.push({ ...noteData, trackIndex });
+                    }
                 }
             }
 
@@ -169,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
 
                 MusicMaker.Clipboard.set(clipboardData);
-                console.log('Notes copied to clipboard:', clipboardData);
             }
         } else if (pasteKeyPressed) {
             const notesToPaste = MusicMaker.Clipboard.get();
