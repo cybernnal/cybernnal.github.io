@@ -230,14 +230,25 @@ MusicMaker.renderNote = function(note) {
         const lastRightClick = parseFloat(noteElement.dataset.lastRightClick) || 0;
 
         if (now - lastRightClick < 300) { // 300ms threshold for double-click
-            const noteId = e.target.dataset.noteId;
-            // Find the note in the tracks array and remove it
-            const noteIndex = tracks.findIndex(n => n.id == noteId);
-            if (noteIndex > -1) {
-                tracks.splice(noteIndex, 1);
+            const clickedNote = e.target;
+            if (clickedNote.classList.contains('selected')) {
+                const selectedNotes = document.querySelectorAll('.note.selected');
+                selectedNotes.forEach(noteElement => {
+                    const noteId = noteElement.dataset.noteId;
+                    const noteIndex = tracks.findIndex(n => n.id == noteId);
+                    if (noteIndex > -1) {
+                        tracks.splice(noteIndex, 1);
+                    }
+                    noteElement.remove();
+                });
+            } else {
+                const noteId = clickedNote.dataset.noteId;
+                const noteIndex = tracks.findIndex(n => n.id == noteId);
+                if (noteIndex > -1) {
+                    tracks.splice(noteIndex, 1);
+                }
+                clickedNote.remove();
             }
-            // Remove the element from the DOM
-            e.target.remove();
             MusicMaker.Storage.save(tracks, songTotalTime, MusicMaker.getTrackLayout());
         }
         noteElement.dataset.lastRightClick = now;
