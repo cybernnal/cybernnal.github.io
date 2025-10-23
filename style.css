@@ -1,3 +1,4 @@
+
 html, body {
   height: 100%;
   margin: 0;
@@ -52,107 +53,58 @@ html, body {
 }
 
 #app-container {
-  height: 100vh;
-  overflow: auto; /* single scrollbar */
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-  position: relative;
-}
-
-#app-container::-webkit-scrollbar {
-  display: none;
-}
-
-.track {
-  display: flex;
-}
-
-
-.track-header {
-  width: 100px;
-  flex-shrink: 0;
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background-color: #333; /* to hide the content behind */
-  display: flex;
-  align-items: center;
-}
-
-.track-controls {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    z-index: 2;
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    width: auto;
+    flex-direction: column;
+    height: 100vh;
 }
 
-.expand-btn, .add-btn, .delete-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0 3px;
-    font-size: 14px;
-    font-weight: bold;
-    line-height: 1;
+#main-content {
+    flex-grow: 1;
+    display: flex;
+    overflow-x: auto; /* Single horizontal scrollbar */
+    position: relative;
 }
 
-
-.key {
-  flex-grow: 1;
-  height: 15px;
-  border: 1px solid #000;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end; /* align to the right */
-  box-sizing: border-box;
-  position: relative;
+#track-headers-container {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: #333;
 }
 
-.key--white .expand-btn, .key--white .add-btn, .key--white .delete-btn {
-    color: #000;
+#timeline-container {
+    flex-grow: 1;
 }
 
-.key--black .expand-btn, .key--black .add-btn, .key--black .delete-btn {
-    color: #fff;
+#track-headers-table,
+#timeline-table {
+    border-collapse: collapse;
+    width: 100%;
 }
 
-
-.track-group-container.collapsed .track:not(:first-child) {
-    display: none;
+#track-headers-table th,
+#timeline-table th {
+    height: 22px; /* Adjust as needed */
 }
 
-
-.key--white {
-  background-color: #fff;
-  color: #000;
+#track-headers-table td,
+#timeline-table td {
+    border: 1px solid #555;
+    box-sizing: border-box;
+    padding: 0;
+    height: 17px;
 }
 
-.key--black {
-  background-color: #000;
-  color: #fff;
+#track-headers-table th {
+    background-color: #444;
 }
 
-.timeline {
-  flex-grow: 1;
-  border-bottom: 1px solid #555;
-  background-image: linear-gradient(to right, #444 1px, transparent 1px);
-  background-size: 50px 100%;
-  min-width: 2000px;
-  height: 15px;
-  box-sizing: border-box;
-  position: relative; /* This is the fix */
-}
-
-.octave-separator {
-    height: 20px;
-    background-color: #1a1a1a;
-    border-top: 1px solid #666;
-    border-bottom: 1px solid #666;
+.timeline-col {
+    position: relative;
+    height: 100%;
+    background-image: linear-gradient(to right, #444 1px, transparent 1px);
+    background-size: 50px 100%;
+    min-width: 2000px;
 }
 
 .note {
@@ -222,39 +174,13 @@ html, body {
   color: #333;
 }
 
-.track.highlighted .key {
-    border: 2px solid #ffc107; /* Thicker and gold */
-    box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); /* Glowing effect */
-}
-
-.track.highlighted .key--white {
-    background-color: #fff8e1; /* Lighter yellow */
-}
-
-.track.highlighted .key--black {
-    background-color: #424242; /* Lighter black */
-}
-
-.track.highlighted .note {
-    color: #000;
-    font-weight: bold;
-}
-
-.track.highlighted .timeline {
-    border-top: 2px solid #ffc107;
-    border-bottom: 2px solid #ffc107;
-}
-
 #timeline-ruler {
     position: sticky;
-    top: 58px; /* Height of the header */
+    top: 0;
     z-index: 5;
     height: 20px;
     background-color: #2a2a2a;
     border-bottom: 1px solid #444;
-    display: flex;
-    align-items: center;
-    padding-left: 100px; /* Same as track-header width */
     box-sizing: border-box;
 }
 
@@ -279,4 +205,78 @@ html, body {
     height: 100%;
     background-color: red;
     z-index: 6;
+}
+
+.track-controls {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: auto;
+}
+
+.expand-btn, .add-btn, .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 3px;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.key {
+  flex-grow: 1;
+  height: 15px;
+  border: 1px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* align to the right */
+  box-sizing: border-box;
+  position: relative;
+}
+
+.key--white .expand-btn, .key--white .add-btn, .key--white .delete-btn {
+    color: #000;
+}
+
+.key--black .expand-btn, .key--black .add-btn, .key--black .delete-btn {
+    color: #fff;
+}
+
+.key--white {
+  background-color: #fff;
+  color: #000;
+}
+
+.key--black {
+  background-color: #000;
+  color: #fff;
+}
+
+tr.highlighted .key {
+    border: 2px solid #ffc107; /* Thicker and gold */
+    box-shadow: 0 0 5px rgba(255, 193, 7, 0.5); /* Glowing effect */
+}
+
+tr.highlighted .key--white {
+    background-color: #fff8e1; /* Lighter yellow */
+}
+
+tr.highlighted .key--black {
+    background-color: #424242; /* Lighter black */
+}
+
+tr.highlighted .note {
+    color: #000;
+    font-weight: bold;
+}
+
+tr.highlighted .timeline-col {
+    border-top: 2px solid #ffc107;
+    border-bottom: 2px solid #ffc107;
 }

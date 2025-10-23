@@ -80,7 +80,7 @@ class Playback {
         const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
         const timeUnit = 0.05 * tempo;
 
-        tracks.forEach(note => {
+        MusicMaker.notes.forEach(note => {
             const source = this.audioContext.createBufferSource();
             source.buffer = this.soundBuffer;
             source.loop = true;

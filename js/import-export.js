@@ -12,16 +12,18 @@ MusicMaker.importTracks = function(beforeState) {
         reader.onload = e => {
             const content = e.target.result;
             const songData = MusicMaker.parseAndLoadSong(content);
-            tracks = songData.tracks;
+            MusicMaker.notes = songData.tracks;
             songTotalTime = songData.totalTime;
-            songTotalTime += AUTOGROW_AMOUNT_SECONDS / TIME_UNIT_TO_SECONDS; // Add 30s overhead
 
             const bestTempo = MusicMaker.findBestTempo(songData.allDurations);
             MusicMaker.setTempo(bestTempo);
 
             MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
+            MusicMaker.setupEventListeners();
+            
             MusicMaker.renderAllNotes(); // Render the new notes
             updateTimelineWidth(); // Update the timeline width to fit the imported song
+
             MusicMaker.commitChange(beforeState);
         };
         reader.readAsText(file);

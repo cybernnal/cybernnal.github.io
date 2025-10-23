@@ -28,9 +28,33 @@
   </div>
   <button id="playBtn">Play</button>
 </div>
-<div id="timeline-ruler"></div>
 <div id="app-container">
-  <!-- Tracks will be generated here -->
+    <div id="main-content">
+        <div id="track-headers-container">
+            <table id="track-headers-table">
+                <thead>
+                    <tr>
+                        <th>Instrument</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+        <div id="timeline-container" class="hide-scrollbars">
+            <table id="timeline-table">
+                <thead>
+                    <tr>
+                        <th class="timeline-header-cell">
+                            <div id="timeline-ruler"></div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <div id="reset-modal" class="modal" style="display:none;">
