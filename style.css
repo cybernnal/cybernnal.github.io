@@ -244,3 +244,39 @@ html, body {
     border-top: 2px solid #ffc107;
     border-bottom: 2px solid #ffc107;
 }
+
+#timeline-ruler {
+    position: sticky;
+    top: 58px; /* Height of the header */
+    z-index: 5;
+    height: 20px;
+    background-color: #2a2a2a;
+    border-bottom: 1px solid #444;
+    display: flex;
+    align-items: center;
+    padding-left: 100px; /* Same as track-header width */
+    box-sizing: border-box;
+}
+
+.time-marker {
+    position: absolute;
+    height: 100%;
+    border-left: 1px solid #666;
+}
+
+.time-label {
+    position: absolute;
+    transform: translateX(-50%);
+    color: #aaa;
+    font-size: 10px;
+}
+
+#playback-cursor {
+    position: absolute;
+    top: 0;
+    left: 100px; /* Start at the same position as the timeline ruler */
+    width: 2px;
+    height: 100%;
+    background-color: red;
+    z-index: 6;
+}
