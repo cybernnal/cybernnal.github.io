@@ -1,0 +1,4 @@
+[submodule "vendor/SoundOfSteam"]
+	path = vendor/SoundOfSteam
+	url = https://github.com/CSOS-Team/SoundOfSteam.git
+	branch = 1.21-neoforge
