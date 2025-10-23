@@ -303,7 +303,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         tracks.push(newNote);
         MusicMaker.renderNote(newNote);
         MusicMaker.updateSongTotalTime();
-        // checkAndGrowTimeline(newNote);
+        checkAndGrowTimeline(newNote);
         MusicMaker.commitChange(beforeState);
     });
 
@@ -1056,7 +1056,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
     document.addEventListener('mousedown', onMouseDown, true);
     document.addEventListener('keydown', onKeyDown);
 };
-/* function checkAndGrowTimeline(newNote) {
+function checkAndGrowTimeline(newNote) {
     const noteEndTimeInUnits = newNote.start + newNote.duration;
     const remainingTimeInUnits = songTotalTime - noteEndTimeInUnits;
     const thresholdInUnits = AUTOGROW_THRESHOLD_SECONDS / TIME_UNIT_TO_SECONDS;
@@ -1066,7 +1066,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
         songTotalTime += growAmountInUnits;
         updateTimelineWidth();
     }
-} */
+}
 
 function updateTimelineWidth() {
     const timelines = document.querySelectorAll('.timeline');
@@ -1080,6 +1080,8 @@ function updateTimelineWidth() {
         separator.style.minWidth = (newWidth + 100) + 'px';
     });
 }
+
+
 
 MusicMaker.setTempo = function(tempo) {
     const tempoSlider = document.getElementById('tempo-slider');
