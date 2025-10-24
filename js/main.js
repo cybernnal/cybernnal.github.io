@@ -123,7 +123,7 @@ MusicMaker.setupEventListeners = function() {
             return;
         }
 
-        if (e.button === 0 && !e.target.classList.contains('note')) { // Left-click on empty area
+        if (e.button === 0 && !e.target.classList.contains('note') && e.target.id !== 'playback-cursor') { // Left-click on empty area
             if (e.target.closest('#track-headers-container')) {
                 return;
             }
@@ -249,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     MusicMaker.createUI(trackLayout);
     MusicMaker.populateInstrumentSelector();
     MusicMaker.setupEventListeners();
+    MusicMaker.setupCursorEventListeners();
 
     if (savedState) {
         MusicMaker.notes = savedState.tracks || [];
@@ -308,6 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
         MusicMaker.populateInstrumentSelector();
         updateTimelineWidth();
         MusicMaker.setupEventListeners();
+        MusicMaker.updateCursorHeight();
+        MusicMaker.updateCursor(0);
         MusicMaker.commitChange(beforeState);
         resetModal.style.display = 'none';
     });
@@ -466,4 +469,5 @@ document.addEventListener('DOMContentLoaded', () => {
             MusicMaker.redo();
         }
     });
+    MusicMaker.updateCursor(0);
 });

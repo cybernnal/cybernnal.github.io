@@ -37,6 +37,7 @@ MusicMaker.importTracks = function(beforeState) {
                 }
             });
 
+            MusicMaker.updateCursor(0);
             MusicMaker.commitChange(beforeState);
         };
         reader.readAsText(file);

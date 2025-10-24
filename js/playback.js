@@ -115,6 +115,16 @@ class Playback {
             cancelAnimationFrame(this.rafId);
             this.rafId = null;
         }
+        MusicMaker.updateCursor(this.playbackPosition);
+    }
+
+    seek(positionInSeconds) {
+        this.playbackPosition = positionInSeconds;
+        if (this.isPlaying) {
+            this.pause();
+            this.play();
+        }
+        MusicMaker.updateCursor(this.playbackPosition);
     }
 
     update() {

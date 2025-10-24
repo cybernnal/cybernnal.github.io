@@ -74,6 +74,7 @@ html, body {
 
 #timeline-container {
     flex-grow: 1;
+    position: relative;
 }
 
 #track-headers-table,
@@ -197,6 +198,28 @@ html, body {
     transform: translateX(-50%);
     color: #aaa;
     font-size: 10px;
+}
+
+#playback-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    background-color: red;
+    z-index: 3; /* Below ruler text, above notes */
+    cursor: grab;
+    pointer-events: all; /* Ensure it can be grabbed */
+}
+
+#playback-cursor::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px; /* Larger hitbox */
+    height: 100%;
+    background: transparent;
 }
 
 #playback-cursor {

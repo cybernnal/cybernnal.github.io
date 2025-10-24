@@ -135,6 +135,11 @@ MusicMaker.createUI = function(trackLayout = null) {
     const timelineRuler = document.createElement('div');
     timelineRuler.id = 'timeline-ruler';
     timelineTh.appendChild(timelineRuler);
+
+    const playbackCursor = document.createElement('div');
+    playbackCursor.id = 'playback-cursor';
+    timelineTh.appendChild(playbackCursor);
+
     timelineTr.appendChild(timelineTh);
     timelineThead.appendChild(timelineTr);
     timelineTable.appendChild(timelineThead);
@@ -159,6 +164,7 @@ MusicMaker.createUI = function(trackLayout = null) {
             });
         });
     });
+    MusicMaker.updateCursorHeight();
 };
 
 MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false) {
@@ -292,6 +298,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
                 }
 
                 MusicMaker.commitChange(beforeState);
+                MusicMaker.updateCursorHeight();
             }
         };
         trackControls.appendChild(deleteBtn);
@@ -398,6 +405,15 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         notes: []
     };
     MusicMaker.tracks.push(track);
+    MusicMaker.updateCursorHeight();
+};
+
+MusicMaker.updateCursorHeight = function() {
+    const cursor = document.getElementById('playback-cursor');
+    const timelineTable = document.getElementById('timeline-table');
+    if (cursor && timelineTable) {
+        cursor.style.height = timelineTable.scrollHeight + 'px';
+    }
 };
 
 MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
@@ -1162,6 +1178,6 @@ MusicMaker.updateCursor = function(positionInSeconds) {
         const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
         const timeUnit = 0.05 * tempo;
         const positionInBeats = positionInSeconds / timeUnit;
-        cursor.style.left = (100 + positionInBeats * stepWidth) + 'px';
+        cursor.style.left = (positionInBeats * stepWidth) + 'px';
     }
 }
