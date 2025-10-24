@@ -58,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            MusicMaker.drawTimelineRuler();
+
             switch (newTempo) {
                 case 1:
                     minNoteDuration = 1;
@@ -1175,21 +1177,77 @@ MusicMaker.drawTimelineRuler = function() {
 
     const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
     const timeUnit = 0.05 * tempo;
-    const songTotalTimeInSeconds = songTotalTime * timeUnit;
+    if (timeUnit <= 0) return;
 
-    for (let i = 0; i < songTotalTimeInSeconds; i++) {
+    const songTotalTimeInSeconds = songTotalTime * timeUnit;
+    const pixelsPerSecond = stepWidth / timeUnit;
+
+    // Determine major label spacing to avoid overlap when zoomed out
+    let majorLabelStep = 1;
+    if (pixelsPerSecond < 60) majorLabelStep = 2;
+    if (pixelsPerSecond < 30) majorLabelStep = 5;
+    if (pixelsPerSecond < 15) majorLabelStep = 10;
+    if (pixelsPerSecond < 8) majorLabelStep = 20;
+    if (pixelsPerSecond < 4) majorLabelStep = 60;
+
+    // Determine marker spacing for sub-seconds when zoomed in
+    let markerSubStep = 1; // How many markers per second
+    if (pixelsPerSecond >= 100) markerSubStep = 2; // 0.5s
+    if (pixelsPerSecond >= 200) markerSubStep = 4; // 0.25s
+    if (pixelsPerSecond >= 400) markerSubStep = 8; // 0.125s
+
+    const increment = 1 / markerSubStep;
+
+    for (let i = 0; i < songTotalTimeInSeconds; i += increment) {
+        const leftPosition = (i / timeUnit) * stepWidth;
         const marker = document.createElement('div');
         marker.className = 'time-marker';
-        const leftPosition = (i / timeUnit) * stepWidth;
+
+        // Use a small tolerance for floating point modulo checks
+        const isMajorTick = Math.abs(i % majorLabelStep) < 0.001 || Math.abs(i % majorLabelStep - majorLabelStep) < 0.001;
+        const isSecondTick = Math.abs(i % 1) < 0.001 || Math.abs(i % 1 - 1) < 0.001;
+        const isHalfTick = markerSubStep >= 2 && (Math.abs(i % 0.5) < 0.001 || Math.abs(i % 0.5 - 0.5) < 0.001);
+
+        let labelText = null;
+
+        if (isMajorTick) {
+            marker.style.height = '100%';
+            marker.style.borderLeft = '1px solid #aaa';
+            labelText = Math.round(i).toString();
+        } else if (isSecondTick) {
+            marker.style.height = '75%';
+            marker.style.borderLeft = '1px solid #888';
+        } else if (isHalfTick && pixelsPerSecond >= 200) { // Add labels for 0.5s at high zoom
+            marker.style.height = '60%';
+            marker.style.borderLeft = '1px solid #777';
+            labelText = i.toFixed(2);
+        } else {
+            marker.style.height = '50%';
+            marker.style.borderLeft = '1px solid #666';
+            // Add labels for 0.25s at very high zoom
+            if (markerSubStep >= 4 && pixelsPerSecond >= 400) {
+                 labelText = i.toFixed(2);
+            }
+        }
+
+        // Prevent duplicate labels
+        if (labelText !== null && isMajorTick && i !== Math.round(i)) {
+            labelText = null;
+        }
+        if (labelText !== null && isSecondTick && i !== Math.round(i) && pixelsPerSecond < 200) {
+            labelText = null;
+        }
+
+        if (labelText !== null) {
+            const label = document.createElement('div');
+            label.className = 'time-label';
+            label.textContent = labelText;
+            label.style.left = leftPosition + 'px';
+            ruler.appendChild(label);
+        }
+
         marker.style.left = leftPosition + 'px';
-
-        const label = document.createElement('div');
-        label.className = 'time-label';
-        label.textContent = i;
-        label.style.left = leftPosition + 'px';
-
         ruler.appendChild(marker);
-        ruler.appendChild(label);
     }
 }
 

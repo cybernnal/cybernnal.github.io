@@ -197,8 +197,12 @@ html, body {
 .time-label {
     position: absolute;
     transform: translateX(-50%);
-    color: #aaa;
+    color: #ccc; /* Brighter color */
     font-size: 10px;
+    background-color: #2a2a2a; /* Match header background */
+    padding: 1px 3px;
+    border-radius: 3px;
+    z-index: 1; /* Ensure label is above its marker */
 }
 
 #playback-cursor {
