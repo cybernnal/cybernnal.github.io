@@ -103,7 +103,7 @@ MusicMaker.parseAndLoadSong = function(content) {
         }
     });
 
-    return { tracks: localTracks, totalTime: maxTime, trackLayout: trackLayout, allDurations: allDurations };
+    return { tracks: localTracks, totalTime: maxTime + 100, trackLayout: trackLayout, allDurations: allDurations };
 };
 
 MusicMaker.exportTracks = function(songData) {
