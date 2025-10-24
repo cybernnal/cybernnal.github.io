@@ -61,7 +61,7 @@ html, body {
 #main-content {
     flex-grow: 1;
     display: flex;
-    overflow-x: auto; /* Single horizontal scrollbar */
+    overflow: auto; /* Single horizontal scrollbar */
     position: relative;
 }
 
@@ -85,6 +85,10 @@ html, body {
 #track-headers-table th,
 #timeline-table th {
     height: 22px; /* Adjust as needed */
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background-color: #2a2a2a;
 }
 
 #track-headers-table td,
@@ -175,11 +179,9 @@ html, body {
 }
 
 #timeline-ruler {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    height: 20px;
-    background-color: #2a2a2a;
+    position: relative;
+    height: 100%;
+    width: 100%;
     border-bottom: 1px solid #444;
     box-sizing: border-box;
 }
