@@ -255,6 +255,19 @@ document.addEventListener('DOMContentLoaded', () => {
         songTotalTime = savedState.songTotalTime || 0;
         MusicMaker.renderAllNotes();
         updateTimelineWidth();
+
+        // Expand parent tracks that have children
+        const parentTracks = document.querySelectorAll('.parent-track');
+        parentTracks.forEach(parent => {
+            const pitch = parent.dataset.pitch;
+            const childTracks = document.querySelectorAll(`.child-track[data-pitch="${pitch}"]`);
+            if (childTracks.length > 0) {
+                const expandBtn = parent.querySelector('.expand-btn');
+                if (expandBtn) {
+                    expandBtn.click();
+                }
+            }
+        });
     }
     
     // Initial state for undo

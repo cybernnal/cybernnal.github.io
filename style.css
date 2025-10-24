@@ -280,3 +280,19 @@ tr.highlighted .timeline-col {
     border-top: 2px solid #ffc107;
     border-bottom: 2px solid #ffc107;
 }
+
+.parent-track .key {
+    font-weight: bold;
+}
+
+.child-track .key {
+    padding-left: 20px; /* Indent child tracks */
+}
+
+.expand-btn {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    line-height: 16px;
+    text-align: center;
+}

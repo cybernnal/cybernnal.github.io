@@ -154,27 +154,27 @@ MusicMaker.createUI = function(trackLayout = null) {
         MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
             const fullPitchName = pitchName + octaveNum;
             const instruments = (trackLayout && trackLayout[fullPitchName]) ? trackLayout[fullPitchName] : ['diapason'];
-            instruments.forEach(instrumentName => {
-                MusicMaker.addTrack(fullPitchName, size, false, null, instrumentName);
+            instruments.forEach((instrumentName, instrumentIndex) => {
+                MusicMaker.addTrack(fullPitchName, size, false, null, instrumentName, instrumentIndex > 0);
             });
         });
     });
 };
 
-MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason') {
+MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false) {
     const headersTbody = document.querySelector('#track-headers-table tbody');
     const timelineTbody = document.querySelector('#timeline-table tbody');
 
     let newInstrumentName = instrumentName;
     if (isButton) {
-        const existingInstrumentElements = Array.from(headersTbody.querySelectorAll('tr'));
+        const existingInstrumentElements = Array.from(headersTbody.querySelectorAll(`tr[data-pitch="${fullPitchName}"]`));
         const usedInstruments = existingInstrumentElements.map(el => el.dataset.instrument);
         const allInstruments = Object.keys(MusicMaker.instruments);
         newInstrumentName = allInstruments.find(inst => !usedInstruments.includes(inst));
 
         if (!newInstrumentName) {
             let customInstrumentIndex = 1;
-            while (MusicMaker.instruments[`custom${customInstrumentIndex}`]) {
+            while (usedInstruments.includes(`custom${customInstrumentIndex}`) || MusicMaker.instruments[`custom${customInstrumentIndex}`]) {
                 customInstrumentIndex++;
             }
             newInstrumentName = `custom${customInstrumentIndex}`;
@@ -207,6 +207,11 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     trTimeline.dataset.pitch = fullPitchName;
     trTimeline.dataset.instrument = newInstrumentName;
 
+    if (isChild) {
+        trHeader.classList.add('child-track');
+        trTimeline.classList.add('child-track');
+    }
+
     trHeader.addEventListener('mouseenter', () => {
         trHeader.classList.add('highlighted');
         trTimeline.classList.add('highlighted');
@@ -227,33 +232,70 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     const trackControls = document.createElement('div');
     trackControls.className = 'track-controls';
 
-    const addBtn = document.createElement('button');
-    addBtn.className = 'add-btn';
-    addBtn.textContent = '+';
-    addBtn.onclick = () => MusicMaker.addTrack(fullPitchName, size, true, null, newInstrumentName);
-    trackControls.appendChild(addBtn);
+    if (!isChild) { // Parent track
+        trHeader.classList.add('parent-track');
+        trHeader.classList.add('collapsed');
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.innerHTML = '<b>X</b>';
-    deleteBtn.onclick = () => {
-        const beforeState = MusicMaker.createSnapshot();
-        const trackIndex = MusicMaker.tracks.findIndex(t => t.pitch === fullPitchName && t.instrumentName === newInstrumentName);
-        if (trackIndex > -1) {
-            const track = MusicMaker.tracks[trackIndex];
-            const associatedNotes = MusicMaker.notes.filter(note => note.pitch === track.pitch && note.instrumentName === track.instrumentName);
-            const noteIdsToRemove = new Set(associatedNotes.map(n => n.id));
+        const expandBtn = document.createElement('button');
+        expandBtn.className = 'expand-btn';
+        expandBtn.innerHTML = '&#9654;'; // Right-pointing triangle
+        expandBtn.style.visibility = 'hidden';
+        expandBtn.onclick = (e) => {
+            e.stopPropagation();
+            trHeader.classList.toggle('collapsed');
+            const isCollapsed = trHeader.classList.contains('collapsed');
+            expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;';
 
-            MusicMaker.notes = MusicMaker.notes.filter(note => !noteIdsToRemove.has(note.id));
+            let nextHeaderRow = trHeader.nextElementSibling;
+            while (nextHeaderRow && nextHeaderRow.classList.contains('child-track') && nextHeaderRow.dataset.pitch === fullPitchName) {
+                const timelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${fullPitchName}"][data-instrument="${nextHeaderRow.dataset.instrument}"]`);
+                nextHeaderRow.style.display = isCollapsed ? 'none' : 'table-row';
+                if (timelineRow) timelineRow.style.display = isCollapsed ? 'none' : 'table-row';
+                nextHeaderRow = nextHeaderRow.nextElementSibling;
+            }
+        };
+        trackControls.appendChild(expandBtn);
 
-            track.trHeader.remove();
-            track.trTimeline.remove();
-            MusicMaker.tracks.splice(trackIndex, 1);
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-btn';
+        addBtn.textContent = '+';
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (trHeader.classList.contains('collapsed')) {
+                expandBtn.click();
+            }
+            MusicMaker.addTrack(fullPitchName, size, true, trHeader, undefined, true);
+            expandBtn.style.visibility = 'visible';
+        };
+        trackControls.appendChild(addBtn);
 
-            MusicMaker.commitChange(beforeState);
-        }
-    };
-    trackControls.appendChild(deleteBtn);
+    } else { // Child track
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '<b>X</b>';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            const beforeState = MusicMaker.createSnapshot();
+            const trackIndex = MusicMaker.tracks.findIndex(t => t.pitch === fullPitchName && t.instrumentName === newInstrumentName);
+            if (trackIndex > -1) {
+                const track = MusicMaker.tracks[trackIndex];
+                const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
+
+                track.trHeader.remove();
+                track.trTimeline.remove();
+                MusicMaker.tracks.splice(trackIndex, 1);
+
+                const childTracks = document.querySelectorAll(`.child-track[data-pitch="${fullPitchName}"]`);
+                if (childTracks.length === 0) {
+                    const expandBtn = parentHeader.querySelector('.expand-btn');
+                    if(expandBtn) expandBtn.style.visibility = 'hidden';
+                }
+
+                MusicMaker.commitChange(beforeState);
+            }
+        };
+        trackControls.appendChild(deleteBtn);
+    }
 
     key.appendChild(trackControls);
     tdHeader.appendChild(key);
@@ -315,8 +357,37 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     tdTimeline.appendChild(timeline);
     trTimeline.appendChild(tdTimeline);
 
-    headersTbody.appendChild(trHeader);
-    timelineTbody.appendChild(trTimeline);
+    if (container) { // container is the parent trHeader for a new child track
+        let lastChildHeader = container;
+        while (lastChildHeader.nextElementSibling && lastChildHeader.nextElementSibling.classList.contains('child-track') && lastChildHeader.nextElementSibling.dataset.pitch === fullPitchName) {
+            lastChildHeader = lastChildHeader.nextElementSibling;
+        }
+        lastChildHeader.after(trHeader);
+
+        const parentTimelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${fullPitchName}"][data-instrument="${container.dataset.instrument}"]`);
+        if (parentTimelineRow) {
+            let lastChildTimeline = parentTimelineRow;
+            while (lastChildTimeline.nextElementSibling && lastChildTimeline.nextElementSibling.classList.contains('child-track') && lastChildTimeline.nextElementSibling.dataset.pitch === fullPitchName) {
+                lastChildTimeline = lastChildTimeline.nextElementSibling;
+            }
+            lastChildTimeline.after(trTimeline);
+        } else { // Should not happen if container is present
+            timelineTbody.appendChild(trTimeline);
+        }
+
+    } else { // Initial track creation
+        headersTbody.appendChild(trHeader);
+        timelineTbody.appendChild(trTimeline);
+        if (isChild) {
+            trHeader.style.display = 'none';
+            trTimeline.style.display = 'none';
+            const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
+            if (parentHeader) {
+                const expandBtn = parentHeader.querySelector('.expand-btn');
+                if(expandBtn) expandBtn.style.visibility = 'visible';
+            }
+        }
+    }
 
     const track = {
         pitch: fullPitchName,
