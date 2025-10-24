@@ -2,6 +2,21 @@
 MusicMaker.setupCursorEventListeners = function() {
     const timelineContainer = document.getElementById('timeline-container');
     const playbackCursor = document.getElementById('playback-cursor');
+    const ruler = document.getElementById('timeline-ruler');
+
+    if (ruler) {
+        ruler.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only for left-click
+
+            const clickX = e.offsetX;
+            const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
+            const timeUnit = 0.05 * tempo;
+            const positionInBeats = clickX / stepWidth;
+            const positionInSeconds = positionInBeats * timeUnit;
+
+            MusicMaker.Playback.seek(positionInSeconds);
+        });
+    }
 
     let isDragging = false;
 

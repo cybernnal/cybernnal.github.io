@@ -36,9 +36,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tempoSlider) {
         tempoSlider.addEventListener('input', (e) => {
-            const tempo = parseInt(e.target.value, 10);
-            tempoValue.textContent = tempo;
-            switch (tempo) {
+            const newTempo = parseInt(e.target.value, 10);
+            tempoValue.textContent = newTempo;
+
+            const playback = MusicMaker.Playback;
+            if (playback && !playback.isPlaying) {
+                const oldTempo = playback.currentTempo;
+                if (oldTempo !== newTempo) {
+                    const oldTimeUnit = 0.05 * oldTempo;
+                    // Avoid division by zero if oldTimeUnit is 0
+                    const positionInBeats = oldTimeUnit > 0 ? playback.playbackPosition / oldTimeUnit : 0;
+
+                    const newTimeUnit = 0.05 * newTempo;
+                    playback.playbackPosition = positionInBeats * newTimeUnit;
+
+                    // Update the currentTempo on the playback object immediately
+                    playback.currentTempo = newTempo;
+
+                    // Update the visual cursor position
+                    MusicMaker.updateCursor(playback.playbackPosition);
+                }
+            }
+
+            switch (newTempo) {
                 case 1:
                     minNoteDuration = 1;
                     break;
@@ -61,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stepWidth = parseInt(e.target.value, 10);
             updateTimelineWidth();
             MusicMaker.renderAllNotes();
+            MusicMaker.updateCursor(MusicMaker.Playback.playbackPosition);
         });
     }
 });
