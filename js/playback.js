@@ -9,6 +9,7 @@ class Playback {
         this.playbackPosition = 0;
         this.rafId = null;
         this.playingSources = [];
+        this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
 
         this.compressor = this.audioContext.createDynamicsCompressor();
         this.compressor.threshold.setValueAtTime(-30, this.audioContext.currentTime);
@@ -77,8 +78,8 @@ class Playback {
         console.log('AudioContext state:', this.audioContext.state);
         this.startTime = this.audioContext.currentTime - this.playbackPosition;
 
-        const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
-        const timeUnit = 0.05 * tempo;
+        this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
+        const timeUnit = 0.05 * this.currentTempo;
 
         MusicMaker.notes.forEach(note => {
             const source = this.audioContext.createBufferSource();
@@ -119,8 +120,21 @@ class Playback {
     update() {
         if (!this.isPlaying) return;
 
-        const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
-        const timeUnit = 0.05 * tempo;
+        const newTempo = parseInt(document.getElementById('tempo-slider').value, 10);
+        if (newTempo !== this.currentTempo) {
+            const oldTimeUnit = 0.05 * this.currentTempo;
+            const positionInSeconds = this.audioContext.currentTime - this.startTime;
+            const positionInBeats = positionInSeconds / oldTimeUnit;
+
+            const newTimeUnit = 0.05 * newTempo;
+            this.playbackPosition = positionInBeats * newTimeUnit;
+
+            this.pause();
+            this.play();
+            return;
+        }
+
+        const timeUnit = 0.05 * this.currentTempo;
         const songTotalTimeInSeconds = songTotalTime * timeUnit;
 
         this.playbackPosition = this.audioContext.currentTime - this.startTime;
