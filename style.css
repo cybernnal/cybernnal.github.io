@@ -1,5 +1,7 @@
 
 html, body {
+  height: 100vh;
+  overflow: hidden;
   margin: 0;
   background-color: #333;
   color: #fff;
@@ -14,8 +16,8 @@ html, body {
 #app-container {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
     flex-grow: 1;
+    overflow: hidden;
 }
 
 #main-content {
@@ -167,10 +169,11 @@ html, body {
 #playback-cursor {
     position: absolute;
     top: 0;
-    left: 0;
-    width: 3px;
+    left: 100px; /* Start at the same position as the timeline ruler */
+    width: 2px;
+    height: 100%;
     background-color: red;
-    z-index: 3; /* Below ruler text, above notes */
+    z-index: 6;
     cursor: grab;
     pointer-events: all; /* Ensure it can be grabbed */
 }
@@ -184,16 +187,6 @@ html, body {
     width: 10px; /* Larger hitbox */
     height: 100%;
     background: transparent;
-}
-
-#playback-cursor {
-    position: absolute;
-    top: 0;
-    left: 100px; /* Start at the same position as the timeline ruler */
-    width: 2px;
-    height: 100%;
-    background-color: red;
-    z-index: 6;
 }
 
 .track-controls {

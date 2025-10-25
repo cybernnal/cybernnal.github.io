@@ -151,6 +151,14 @@ MusicMaker.updateSongTotalTime = function() {
     songTotalTime = maxTime;
 }
 
+MusicMaker.updateCursorHeight = function() {
+    const timelineTable = document.getElementById('timeline-table');
+    const cursor = document.getElementById('playback-cursor');
+    if (timelineTable && cursor) {
+        cursor.style.height = timelineTable.scrollHeight + 'px';
+    }
+};
+
 MusicMaker.setupEventListeners = function() {
     const mainContent = document.getElementById('main-content');
     let isPanning = false;
@@ -273,6 +281,8 @@ MusicMaker.setupEventListeners = function() {
         mainContent.scrollTop = scrollTop - walkY;
     });
 
+    mainContent.addEventListener('scroll', MusicMaker.updateCursorHeight);
+
     mainContent.addEventListener('contextmenu', (e) => {
         e.preventDefault();
     });
@@ -354,6 +364,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('undoBtn').addEventListener('click', MusicMaker.undo);
     document.getElementById('redoBtn').addEventListener('click', MusicMaker.redo);
+
+    const playBtn = document.getElementById('playBtn');
+    if (playBtn) {
+        playBtn.addEventListener('click', () => {
+            if (MusicMaker.Playback.isPlaying) {
+                MusicMaker.Playback.pause();
+                playBtn.textContent = 'Play';
+            } else {
+                MusicMaker.Playback.play();
+                playBtn.textContent = 'Pause';
+            }
+        });
+    }
+
+    const rewindBtn = document.getElementById('rewindBtn');
+    if (rewindBtn) {
+        rewindBtn.addEventListener('click', () => {
+            MusicMaker.Playback.seek(0);
+        });
+    }
 
     const resetBtn = document.getElementById('resetBtn');
     const resetModal = document.getElementById('reset-modal');
@@ -568,4 +598,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     MusicMaker.updateCursor(0);
+    MusicMaker.updateCursorHeight();
 });

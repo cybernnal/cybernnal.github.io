@@ -161,7 +161,7 @@ MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
 
     const playbackCursor = document.createElement('div');
     playbackCursor.id = 'playback-cursor';
-    timelineTh.appendChild(playbackCursor);
+        timelineContainer.appendChild(playbackCursor);
 
     timelineTr.appendChild(timelineTh);
     timelineThead.appendChild(timelineTr);
@@ -1218,20 +1218,7 @@ MusicMaker.setTempo = function(tempo) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const playBtn = document.getElementById('playBtn');
-    if (playBtn) {
-        playBtn.addEventListener('click', () => {
-            if (MusicMaker.Playback.isPlaying) {
-                MusicMaker.Playback.pause();
-                playBtn.textContent = 'Play';
-            } else {
-                MusicMaker.Playback.play();
-                playBtn.textContent = 'Pause';
-            }
-        });
-    }
-});
+
 
 MusicMaker.drawTimelineRuler = function() {
     const ruler = document.getElementById('timeline-ruler');
