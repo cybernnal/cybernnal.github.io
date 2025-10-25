@@ -181,12 +181,28 @@ MusicMaker.createUI = function(trackLayout = null) {
         // Create the rows for this octave block
         MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
             const fullPitchName = pitchName + octaveNum;
-            const instruments = (trackLayout && trackLayout[fullPitchName]) ? trackLayout[fullPitchName] : ['diapason'];
-            instruments.forEach((instrumentName, instrumentIndex) => {
-                MusicMaker.addTrack(fullPitchName, size, false, null, instrumentName, instrumentIndex > 0);
-            });
+            if (trackLayout && trackLayout.hasOwnProperty(fullPitchName)) {
+                let instruments = trackLayout[fullPitchName];
+                if (instruments.length === 0) {
+                    instruments.push('diapason');
+                }
+                instruments.forEach((instrumentName, instrumentIndex) => {
+                    MusicMaker.addTrack(fullPitchName, size, false, null, instrumentName, instrumentIndex > 0);
+                });
+            } else if (!trackLayout) {
+                MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false);
+            }
         });
     });
+
+    if (trackLayout && trackLayout['Percussion']) {
+        const percussionInstruments = trackLayout['Percussion'];
+        MusicMaker.addTrack('Percussion', 'medium', false, null, 'Percussion', false);
+        percussionInstruments.forEach(instrumentName => {
+            MusicMaker.addTrack('Percussion', 'medium', false, null, instrumentName, true);
+        });
+    }
+
     MusicMaker.updateCursorHeight();
 };
 
@@ -255,8 +271,9 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
 
     const key = document.createElement('div');
     const isBlackKey = fullPitchName.includes('#');
-    key.className = `key ${isBlackKey ? 'key--black' : 'key--white'}`;
-    key.textContent = fullPitchName;
+    const isPercussion = fullPitchName === 'Percussion';
+    key.className = `key ${isBlackKey ? 'key--black' : 'key--white'} ${isPercussion ? 'key--percussion' : ''}`;
+    key.textContent = isChild && isPercussion ? instrumentName : fullPitchName;
 
     const trackControls = document.createElement('div');
     trackControls.className = 'track-controls';
@@ -288,6 +305,9 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         const addBtn = document.createElement('button');
         addBtn.className = 'add-btn';
         addBtn.textContent = '+';
+        if (isPercussion) {
+            addBtn.style.display = 'none';
+        }
         addBtn.onclick = (e) => {
             e.stopPropagation();
             if (trHeader.classList.contains('collapsed')) {

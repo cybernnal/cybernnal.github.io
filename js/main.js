@@ -280,6 +280,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const beforeState = MusicMaker.createSnapshot();
         MusicMaker.importTracks(beforeState);
     });
+    document.getElementById('importMidiBtn').addEventListener('click', () => {
+        const beforeState = MusicMaker.createSnapshot();
+        MusicMaker.MidiImport.importMidi(beforeState);
+    });
     document.getElementById('exportBtn').addEventListener('click', () => {
         MusicMaker.exportTracks({ tracks: MusicMaker.notes, totalTime: songTotalTime });
     });

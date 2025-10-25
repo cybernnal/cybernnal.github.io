@@ -50,6 +50,9 @@ class Playback {
     }
 
     calculatePlaybackRate(note) {
+        if (note.pitch.startsWith('Percussion')) {
+            return 1;
+        }
         const baseNoteName = 'F#3';
         const baseMidi = this.noteToMidi(baseNoteName);
         const targetMidi = this.noteToMidi(note.pitch);
