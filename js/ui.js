@@ -174,32 +174,42 @@ MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
     mainContent.appendChild(timelineContainer);
     appContainer.appendChild(mainContent);
 
-    // Create the default 5 octaves
-    SIZES.forEach((size, index) => {
-        const octaveNum = 5 - index; // 5 for tiny, 4 for small, etc.
-        MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
-            const fullPitchName = pitchName + octaveNum;
-            const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
-            MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false, isCollapsed);
-        });
-    });
+    const createdPitches = new Set();
 
     // Add tracks from the trackLayout
     if (trackLayout) {
         for (const fullPitchName in trackLayout) {
             if (trackLayout.hasOwnProperty(fullPitchName) && fullPitchName !== 'Percussion') {
                 const instruments = trackLayout[fullPitchName];
-                instruments.forEach((instrumentName) => {
-                    if (instrumentName !== 'diapason') {
-                        const octaveNum = parseInt(fullPitchName.slice(-1));
-                        const size = SIZES[5 - octaveNum];
+                if (instruments.length > 0) {
+                    const parentInstrument = instruments[0]; // The first instrument is the parent
+                    const octaveNum = parseInt(fullPitchName.slice(-1));
+                    const size = SIZES[5 - octaveNum];
+                    const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
+                    MusicMaker.addTrack(fullPitchName, size, false, null, parentInstrument, false, isCollapsed);
+                    createdPitches.add(fullPitchName);
+
+                    for (let i = 1; i < instruments.length; i++) {
+                        const instrumentName = instruments[i];
                         const parentTrack = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
                         MusicMaker.addTrack(fullPitchName, size, false, parentTrack, instrumentName, true);
                     }
-                });
+                }
             }
         }
     }
+
+    // Create the default 5 octaves for any pitches not in the layout
+    SIZES.forEach((size, index) => {
+        const octaveNum = 5 - index; // 5 for tiny, 4 for small, etc.
+        MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
+            const fullPitchName = pitchName + octaveNum;
+            if (!createdPitches.has(fullPitchName)) {
+                const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
+                MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false, isCollapsed);
+            }
+        });
+    });
 
 
     if (trackLayout && trackLayout['Percussion']) {
@@ -283,6 +293,8 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     if (isChild) {
         trHeader.classList.add('child-track');
         trTimeline.classList.add('child-track');
+    } else {
+        trHeader.classList.add('parent-track');
     }
 
     trHeader.addEventListener('mouseenter', () => {
@@ -306,12 +318,10 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     const trackControls = document.createElement('div');
     trackControls.className = 'track-controls';
 
-    if (!isChild) { // Parent track
-        trHeader.classList.add('parent-track');
+    if (!isChild) { // This is now a parent track
         if (isCollapsed) {
             trHeader.classList.add('collapsed');
         }
-
         const expandBtn = document.createElement('button');
         expandBtn.className = 'expand-btn';
         expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;'; // Right or down triangle
