@@ -315,45 +315,17 @@ document.addEventListener('DOMContentLoaded', () => {
         resetModal.style.display = 'none';
     });
 
-    document.getElementById('instrument-selector').addEventListener('change', (e) => {
-        const beforeState = MusicMaker.createSnapshot();
-        const selectedInstrument = e.target.value;
-        if (!selectedInstrument) return;
+    const instrumentSelector = document.getElementById('instrument-selector');
+    const customInstrumentModal = document.getElementById('custom-instrument-modal');
+    const customInstrumentDisplayNameInput = document.getElementById('custom-instrument-display-name');
+    const customInstrumentExportNameInput = document.getElementById('custom-instrument-export-name');
+    const saveCustomInstrumentBtn = document.getElementById('save-custom-instrument');
+    const cancelCustomInstrumentBtn = document.getElementById('cancel-custom-instrument');
 
+    function applyInstrumentChange(instrumentName) {
+        const beforeState = MusicMaker.createSnapshot();
         const selectedNotes = Array.from(document.querySelectorAll('.note.selected'));
         if (selectedNotes.length === 0) return;
-
-        let instrumentName = selectedInstrument;
-
-        if (selectedInstrument === 'custom') {
-            // Generate a unique custom instrument name
-            let customInstrumentIndex = 1;
-            while (MusicMaker.instruments[`custom${customInstrumentIndex}`]) {
-                customInstrumentIndex++;
-            }
-            instrumentName = `custom${customInstrumentIndex}`;
-
-            // Generate a random hue that is not already in use
-            const usedHues = Object.values(MusicMaker.instruments).map(inst => inst.hue);
-            let randomHue;
-            do {
-                randomHue = Math.floor(Math.random() * 360);
-            } while (usedHues.includes(randomHue));
-
-            MusicMaker.instruments[instrumentName] = {
-                sizes: ["tiny", "small", "medium", "large", "huge"],
-                hue: randomHue,
-                saturation: 70
-            };
-
-            // Add the new custom instrument to the dropdown
-            const selector = document.getElementById('instrument-selector');
-            const option = document.createElement('option');
-            option.value = instrumentName;
-            option.textContent = instrumentName.charAt(0).toUpperCase() + instrumentName.slice(1);
-            selector.insertBefore(option, selector.lastChild);
-            selector.value = instrumentName;
-        }
 
         const tracksToChange = new Map();
         selectedNotes.forEach(noteElement => {
@@ -368,32 +340,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tracksToChange.forEach((originalInstrument, pitch) => {
             if (originalInstrument !== instrumentName) {
-                // Check if a track with the new instrument already exists for this pitch
                 const existingTrack = document.querySelector(`tr[data-pitch="${pitch}"][data-instrument="${instrumentName}"]`);
                 if (existingTrack) {
                     alert(`A track for instrument '${instrumentName}' already exists for pitch '${pitch}'. Please choose a different instrument.`);
-                    // Reset the selector to the original instrument to avoid confusion
-                    document.getElementById('instrument-selector').value = originalInstrument;
-                    return; // Stop processing for this track
+                    instrumentSelector.value = originalInstrument;
+                    return;
                 }
 
-                // Find all notes on this pitch with the original instrument
                 const notesOnTrack = MusicMaker.notes.filter(n => n.pitch === pitch && n.instrumentName === originalInstrument);
-                
-                // Update the track element itself
-                const trackElement = document.querySelector(`tr[data-pitch="${pitch}"][data-instrument="${originalInstrument}"]`);
-                if (trackElement) {
-                    trackElement.dataset.instrument = instrumentName;
-                    const timeline = trackElement.querySelector('.timeline-col');
+                const headerTrackElement = document.querySelector(`#track-headers-table tr[data-pitch="${pitch}"][data-instrument="${originalInstrument}"]`);
+                const timelineTrackElement = document.querySelector(`#timeline-table tr[data-pitch="${pitch}"][data-instrument="${originalInstrument}"]`);
+
+                if (headerTrackElement && timelineTrackElement) {
+                    headerTrackElement.dataset.instrument = instrumentName;
+                    timelineTrackElement.dataset.instrument = instrumentName;
+
+                    const timeline = timelineTrackElement.querySelector('.timeline-col');
                     if (timeline) {
                         timeline.dataset.instrument = instrumentName;
                     }
 
-                    // Update the data objects
                     notesOnTrack.forEach(n => n.instrumentName = instrumentName);
 
-                    // Update the appearance of the note elements on the DOM
-                    const noteElementsOnTrack = trackElement.querySelectorAll('.note');
+                    const noteElementsOnTrack = timelineTrackElement.querySelectorAll('.note');
                     noteElementsOnTrack.forEach(noteEl => {
                         const noteId = noteEl.dataset.noteId;
                         const noteData = MusicMaker.notes.find(n => String(n.id) === noteId);
@@ -406,6 +375,67 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         MusicMaker.commitChange(beforeState);
+    }
+
+    instrumentSelector.addEventListener('change', (e) => {
+        const selectedInstrument = e.target.value;
+        if (!selectedInstrument) return;
+
+        const selectedNotes = Array.from(document.querySelectorAll('.note.selected'));
+        if (selectedNotes.length === 0) {
+            instrumentSelector.value = '';
+            return;
+        }
+
+        if (selectedInstrument === 'custom') {
+            customInstrumentModal.style.display = 'flex';
+            customInstrumentDisplayNameInput.focus();
+        } else {
+            applyInstrumentChange(selectedInstrument);
+        }
+    });
+
+    saveCustomInstrumentBtn.addEventListener('click', () => {
+        const displayName = customInstrumentDisplayNameInput.value.trim();
+        const exportName = customInstrumentExportNameInput.value.trim();
+
+        if (!displayName || !exportName) {
+            alert('Please enter both a display name and an export name.');
+            return;
+        }
+
+        const lowerCaseDisplayName = displayName.toLowerCase();
+        const defaultDisplayNames = Object.keys(MusicMaker.instrumentData.instruments).map(name => name.toLowerCase());
+        const customDisplayNames = Object.keys(MusicMaker.instruments).map(name => name.toLowerCase());
+        if (defaultDisplayNames.includes(lowerCaseDisplayName) || customDisplayNames.includes(lowerCaseDisplayName)) {
+            alert('An instrument with this display name already exists.');
+            return;
+        }
+
+        const lowerCaseExportName = exportName.toLowerCase();
+        const defaultExportNames = ['d', 'g', 'w', 'n', 't', 'b', 'v', 'k', 'p', 'o'];
+        const customExportNames = Object.values(MusicMaker.instruments)
+            .filter(i => i.exportName)
+            .map(i => i.exportName.toLowerCase());
+        if (defaultExportNames.includes(lowerCaseExportName) || customExportNames.includes(lowerCaseExportName)) {
+            alert('This export name is already in use.');
+            return;
+        }
+
+        MusicMaker.createCustomInstrument(displayName, exportName);
+        instrumentSelector.value = displayName;
+        applyInstrumentChange(displayName);
+
+        customInstrumentDisplayNameInput.value = '';
+        customInstrumentExportNameInput.value = '';
+        customInstrumentModal.style.display = 'none';
+    });
+
+    cancelCustomInstrumentBtn.addEventListener('click', () => {
+        customInstrumentDisplayNameInput.value = '';
+        customInstrumentExportNameInput.value = '';
+        customInstrumentModal.style.display = 'none';
+        instrumentSelector.value = '';
     });
 
     document.addEventListener('keydown', (e) => {

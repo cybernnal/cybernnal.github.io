@@ -18,13 +18,13 @@ MusicMaker.importTracks = function(beforeState) {
             const bestTempo = MusicMaker.findBestTempo(songData.allDurations);
             MusicMaker.setTempo(bestTempo);
 
-            MusicMaker.createUI(songData.trackLayout); // Clear and recreate UI
+            MusicMaker.createUI(songData.trackLayout);
+            MusicMaker.populateInstrumentSelector();
             MusicMaker.setupEventListeners();
             
-            MusicMaker.renderAllNotes(); // Render the new notes
-            updateTimelineWidth(); // Update the timeline width to fit the imported song
+            MusicMaker.renderAllNotes();
+            updateTimelineWidth();
 
-            // Expand parent tracks that have children
             const parentTracks = document.querySelectorAll('.parent-track');
             parentTracks.forEach(parent => {
                 const pitch = parent.dataset.pitch;
@@ -52,12 +52,24 @@ MusicMaker.parseAndLoadSong = function(content) {
         d: 'diapason', g: 'gamba', w: 'steam whistle', n: 'nasard', t: 'trompette',
         b: 'subbass', v: 'vox humana', k: 'gedeckt', p: 'posaune', o: 'piccolo'
     };
+    const PITCH_NAMES = new Set(['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'LF#']);
+
+    const exportNameToDisplayName = {};
+    for (const code in instrumentMap) {
+        exportNameToDisplayName[code] = instrumentMap[code];
+    }
+    for (const displayName in MusicMaker.instruments) {
+        const instrument = MusicMaker.instruments[displayName];
+        if (instrument.exportName) {
+            exportNameToDisplayName[instrument.exportName] = displayName;
+        }
+    }
 
     const localTracks = [];
     const allDurations = [];
     let currentTime = 0;
-    let maxTime = 0; // To track the actual end time of the song
-    const parts = content.trim().replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/);
+    let maxTime = 0;
+    const parts = content.replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/).filter(p => p);
     const trackLayout = {};
 
     parts.forEach(part => {
@@ -67,7 +79,8 @@ MusicMaker.parseAndLoadSong = function(content) {
         const duration = Number(durationStr);
 
         if (isNaN(duration)) {
-            throw new Error(`Invalid number format in part: ${part}`);
+            console.error(`Invalid number format in part: ${part}`);
+            return;
         }
         allDurations.push(duration);
 
@@ -76,23 +89,49 @@ MusicMaker.parseAndLoadSong = function(content) {
         } else {
             const sizeCode = noteInfo.charAt(0);
             const size = sizeMap[sizeCode];
-            const instrumentCode = noteInfo.charAt(1);
             const octave = sizeToOctave[size];
-            const pitchName = noteInfo.substring(2);
-            const instrumentName = instrumentMap[instrumentCode] || 'diapason';
+
+            let rest = noteInfo.substring(1);
+            let pitchName, exportName;
+
+            if (rest.length > 1 && PITCH_NAMES.has(rest.slice(-2))) {
+                pitchName = rest.slice(-2);
+                exportName = rest.slice(0, -2);
+            } else if (PITCH_NAMES.has(rest.slice(-1))) {
+                pitchName = rest.slice(-1);
+                exportName = rest.slice(0, -1);
+            } else {
+                console.error('Failed to parse note info:', noteInfo);
+                return;
+            }
+
+            let instrumentName = exportNameToDisplayName[exportName];
+            if (!instrumentName) {
+                instrumentName = exportName;
+                if (!MusicMaker.instruments[instrumentName]) {
+                    MusicMaker.createCustomInstrument(instrumentName, exportName);
+                    exportNameToDisplayName[exportName] = instrumentName;
+                }
+            }
+            
             const fullPitchName = pitchName + octave;
+
+            if(!size || !instrumentName || !fullPitchName) {
+                console.error('Failed to parse note:', part);
+                return;
+            }
 
             const newNote = {
                 id: Date.now() + Math.random(),
                 size: size,
                 instrumentName: instrumentName,
-                pitch: fullPitchName, // e.g., C + 5 = C5
+                pitch: fullPitchName, 
                 start: currentTime,
                 duration: duration
             };
             localTracks.push(newNote);
 
-            maxTime = Math.max(maxTime, currentTime + duration); // Update maxTime
+            maxTime = Math.max(maxTime, currentTime + duration);
 
             if (!trackLayout[fullPitchName]) {
                 trackLayout[fullPitchName] = [];
@@ -147,8 +186,18 @@ MusicMaker.exportTracks = function(songData) {
             const octave = note.pitch.slice(-1);
             const size = octaveToSize[octave];
             const sizeCode = sizeReverseMap[size];
-            const instrumentCode = instrumentReverseMap[note.instrumentName];
-            exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+            
+            let instrumentCode = instrumentReverseMap[note.instrumentName];
+            if (!instrumentCode) {
+                const customInstrument = MusicMaker.instruments[note.instrumentName];
+                if (customInstrument) {
+                    instrumentCode = customInstrument.exportName;
+                }
+            }
+
+            if (instrumentCode) {
+                exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+            }
         });
 
         lastTime = time;
@@ -171,20 +220,7 @@ MusicMaker.exportTracks = function(songData) {
     const newTab = window.open();
     newTab.document.open();
     newTab.document.write(
-        `<pre id="song-data">${pasteContent}</pre>
-        <button id="downloadBtn">Download .song</button>
-        <script>
-            document.getElementById('downloadBtn').addEventListener('click', () => {
-                const text = document.getElementById('song-data').textContent;
-                const blob = new Blob([text], { type: 'text/plain' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'music.song';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            });
-</script>`
+        `<pre id="song-data">${pasteContent}</pre>\n        <button id="downloadBtn">Download .song</button>\n        <script>\n            document.getElementById('downloadBtn').addEventListener('click', () => {\n                const text = document.getElementById('song-data').textContent;\n                const blob = new Blob([text], { type: 'text/plain' });\n                const a = document.createElement('a');\n                a.href = URL.createObjectURL(blob);\n                a.download = 'music.song';\n                document.body.appendChild(a);\n                a.click();\n                document.body.removeChild(a);\n            });\n</script>`
     );
     newTab.document.close();
 };

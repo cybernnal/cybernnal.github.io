@@ -120,7 +120,7 @@ MusicMaker.populateInstrumentSelector = function() {
 
     const customOption = document.createElement('option');
     customOption.value = 'custom';
-    customOption.textContent = 'Custom';
+    customOption.textContent = 'Add Custom';
     selector.appendChild(customOption);
 };
 
@@ -190,6 +190,27 @@ MusicMaker.createUI = function(trackLayout = null) {
     MusicMaker.updateCursorHeight();
 };
 
+MusicMaker.createCustomInstrument = function(displayName, exportName) {
+    const usedHues = Object.values(MusicMaker.instruments).map(inst => inst.hue);
+    let randomHue;
+    do {
+        randomHue = Math.floor(Math.random() * 360);
+    } while (usedHues.includes(randomHue));
+
+    MusicMaker.instruments[displayName] = {
+        exportName: exportName,
+        sizes: ["tiny", "small", "medium", "large", "huge"],
+        hue: randomHue,
+        saturation: 70
+    };
+
+    const selector = document.getElementById('instrument-selector');
+    const option = document.createElement('option');
+    option.value = displayName;
+    option.textContent = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+    selector.insertBefore(option, selector.lastChild);
+};
+
 MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false) {
     const headersTbody = document.querySelector('#track-headers-table tbody');
     const timelineTbody = document.querySelector('#timeline-table tbody');
@@ -202,29 +223,8 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         newInstrumentName = allInstruments.find(inst => !usedInstruments.includes(inst));
 
         if (!newInstrumentName) {
-            let customInstrumentIndex = 1;
-            while (usedInstruments.includes(`custom${customInstrumentIndex}`) || MusicMaker.instruments[`custom${customInstrumentIndex}`]) {
-                customInstrumentIndex++;
-            }
-            newInstrumentName = `custom${customInstrumentIndex}`;
-
-            const usedHues = Object.values(MusicMaker.instruments).map(inst => inst.hue);
-            let randomHue;
-            do {
-                randomHue = Math.floor(Math.random() * 360);
-            } while (usedHues.includes(randomHue));
-
-            MusicMaker.instruments[newInstrumentName] = {
-                sizes: ["tiny", "small", "medium", "large", "huge"],
-                hue: randomHue,
-                saturation: 70
-            };
-
-            const selector = document.getElementById('instrument-selector');
-            const option = document.createElement('option');
-            option.value = newInstrumentName;
-            option.textContent = newInstrumentName.charAt(0).toUpperCase() + newInstrumentName.slice(1);
-            selector.insertBefore(option, selector.lastChild);
+            alert("No more instruments available. Please create a custom instrument first.");
+            return;
         }
     }
 
