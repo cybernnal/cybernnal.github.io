@@ -23,7 +23,8 @@ MusicMaker.commitChange = function(beforeState) {
     undoStack.push(beforeState);
     redoStack = []; // Clear redo stack on new change
     const { layout, collapseState } = MusicMaker.getTrackLayout();
-    MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, layout, MusicMaker.instruments, collapseState);
+    const volume = document.getElementById('volume-slider').value;
+    MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, layout, MusicMaker.instruments, collapseState, volume);
 }
 
 MusicMaker.undo = function() {
@@ -344,7 +345,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+    const volumeSlider = document.getElementById('volume-slider');
+    if (savedState && savedState.volume) {
+        volumeSlider.value = savedState.volume;
+        MusicMaker.Playback.setVolume(savedState.volume);
+    }
+
+    volumeSlider.addEventListener('input', (e) => {
+        const volume = e.target.value;
+        MusicMaker.Playback.setVolume(volume);
+        const { layout, collapseState } = MusicMaker.getTrackLayout();
+        MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, layout, MusicMaker.instruments, collapseState, volume);
+    });
+
     // Initial state for undo
     undoStack.push(MusicMaker.createSnapshot());
 

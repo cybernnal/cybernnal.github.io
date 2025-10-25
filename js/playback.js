@@ -17,10 +17,17 @@ class Playback {
         this.compressor.ratio.setValueAtTime(15, this.audioContext.currentTime);
         this.compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
         this.compressor.release.setValueAtTime(0.2, this.audioContext.currentTime);
-        this.compressor.connect(this.audioContext.destination);
+
+        this.gainNode = this.audioContext.createGain();
+        this.compressor.connect(this.gainNode);
+        this.gainNode.connect(this.audioContext.destination);
 
         console.log('Playback constructor called');
         this.loadSound('/sound.ogg');
+    }
+
+    setVolume(volume) {
+        this.gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
     }
 
     async loadSound(url) {
