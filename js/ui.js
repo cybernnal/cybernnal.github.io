@@ -124,7 +124,7 @@ MusicMaker.populateInstrumentSelector = function() {
     selector.appendChild(customOption);
 };
 
-MusicMaker.createUI = function(trackLayout = null) {
+MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
     MusicMaker.tracks = [];
     const appContainer = document.getElementById('app-container');
     appContainer.innerHTML = ''; // Clear previous UI
@@ -179,7 +179,8 @@ MusicMaker.createUI = function(trackLayout = null) {
         const octaveNum = 5 - index; // 5 for tiny, 4 for small, etc.
         MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
             const fullPitchName = pitchName + octaveNum;
-            MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false);
+            const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
+            MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false, isCollapsed);
         });
     });
 
@@ -209,7 +210,28 @@ MusicMaker.createUI = function(trackLayout = null) {
         });
     }
 
-    MusicMaker.updateCursorHeight();
+    // Restore collapse state
+    if (collapseState) {
+        const parentTracks = document.querySelectorAll('.parent-track');
+        parentTracks.forEach(parent => {
+            const pitch = parent.dataset.pitch;
+            if (collapseState[pitch]) {
+                parent.classList.add('collapsed');
+                const expandBtn = parent.querySelector('.expand-btn');
+                if (expandBtn) {
+                    expandBtn.innerHTML = '&#9654;';
+                }
+
+                let nextHeaderRow = parent.nextElementSibling;
+                while (nextHeaderRow && nextHeaderRow.classList.contains('child-track') && nextHeaderRow.dataset.pitch === pitch) {
+                    const timelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${pitch}"][data-instrument="${nextHeaderRow.dataset.instrument}"]`);
+                    nextHeaderRow.style.display = 'none';
+                    if (timelineRow) timelineRow.style.display = 'none';
+                    nextHeaderRow = nextHeaderRow.nextElementSibling;
+                }
+            }
+        });
+    }
 };
 
 MusicMaker.createCustomInstrument = function(displayName, exportName) {
@@ -233,7 +255,7 @@ MusicMaker.createCustomInstrument = function(displayName, exportName) {
     selector.insertBefore(option, selector.lastChild);
 };
 
-MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false) {
+MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false, isCollapsed = true) {
     const headersTbody = document.querySelector('#track-headers-table tbody');
     const timelineTbody = document.querySelector('#timeline-table tbody');
 
@@ -286,25 +308,30 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
 
     if (!isChild) { // Parent track
         trHeader.classList.add('parent-track');
-        trHeader.classList.add('collapsed');
+        if (isCollapsed) {
+            trHeader.classList.add('collapsed');
+        }
 
         const expandBtn = document.createElement('button');
         expandBtn.className = 'expand-btn';
-        expandBtn.innerHTML = '&#9654;'; // Right-pointing triangle
-        expandBtn.style.visibility = 'hidden';
+        expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;'; // Right or down triangle
+        expandBtn.style.visibility = 'hidden'; // Initially hidden
+
         expandBtn.onclick = (e) => {
             e.stopPropagation();
+            const beforeState = MusicMaker.createSnapshot();
             trHeader.classList.toggle('collapsed');
-            const isCollapsed = trHeader.classList.contains('collapsed');
-            expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;';
+            const isNowCollapsed = trHeader.classList.contains('collapsed');
+            expandBtn.innerHTML = isNowCollapsed ? '&#9654;' : '&#9660;';
 
             let nextHeaderRow = trHeader.nextElementSibling;
             while (nextHeaderRow && nextHeaderRow.classList.contains('child-track') && nextHeaderRow.dataset.pitch === fullPitchName) {
                 const timelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${fullPitchName}"][data-instrument="${nextHeaderRow.dataset.instrument}"]`);
-                nextHeaderRow.style.display = isCollapsed ? 'none' : 'table-row';
-                if (timelineRow) timelineRow.style.display = isCollapsed ? 'none' : 'table-row';
+                nextHeaderRow.style.display = isNowCollapsed ? 'none' : 'table-row';
+                if (timelineRow) timelineRow.style.display = isNowCollapsed ? 'none' : 'table-row';
                 nextHeaderRow = nextHeaderRow.nextElementSibling;
             }
+            MusicMaker.commitChange(beforeState);
         };
         trackControls.appendChild(expandBtn);
 
@@ -319,7 +346,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
             if (trHeader.classList.contains('collapsed')) {
                 expandBtn.click();
             }
-            MusicMaker.addTrack(fullPitchName, size, true, trHeader, undefined, true);
+            MusicMaker.addTrack(fullPitchName, size, true, trHeader, undefined, true, false);
             expandBtn.style.visibility = 'visible';
         };
         trackControls.appendChild(addBtn);
@@ -434,14 +461,24 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     } else { // Initial track creation
         headersTbody.appendChild(trHeader);
         timelineTbody.appendChild(trTimeline);
-        if (isChild) {
-            trHeader.style.display = 'none';
-            trTimeline.style.display = 'none';
-            const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
-            if (parentHeader) {
-                const expandBtn = parentHeader.querySelector('.expand-btn');
-                if(expandBtn) expandBtn.style.visibility = 'visible';
+    }
+
+    if (isChild) {
+        const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
+        if (parentHeader) {
+            const expandBtn = parentHeader.querySelector('.expand-btn');
+            if(expandBtn) expandBtn.style.visibility = 'visible';
+            if (parentHeader.classList.contains('collapsed')) {
+                trHeader.style.display = 'none';
+                trTimeline.style.display = 'none';
             }
+        }
+    } else {
+        // This is a parent track, check if it has children and show the button
+        const childTracks = document.querySelectorAll(`.child-track[data-pitch="${fullPitchName}"]`);
+        if (childTracks.length > 0) {
+            const expandBtn = trHeader.querySelector('.expand-btn');
+            if (expandBtn) expandBtn.style.visibility = 'visible';
         }
     }
 
@@ -454,16 +491,11 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         notes: []
     };
     MusicMaker.tracks.push(track);
-    MusicMaker.updateCursorHeight();
 };
 
-MusicMaker.updateCursorHeight = function() {
-    const cursor = document.getElementById('playback-cursor');
-    const timelineTable = document.getElementById('timeline-table');
-    if (cursor && timelineTable) {
-        cursor.style.height = timelineTable.scrollHeight + 'px';
-    }
-};
+
+
+
 
 MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
     noteElement.textContent = noteData.instrumentName.substring(0, 3);
@@ -487,7 +519,6 @@ MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
 };
 
 MusicMaker.renderNote = function(note) {
-    console.log('Rendering note:', note);
     const track = MusicMaker.tracks.find(t => t.pitch === note.pitch && t.instrumentName === note.instrumentName);
     if (!track) {
         console.warn('Track not found for note:', note);
@@ -779,6 +810,7 @@ MusicMaker.renderAllNotes = function() {
 
 MusicMaker.getTrackLayout = function() {
     const layout = {};
+    const collapseState = {};
     const headersTbody = document.querySelector('#track-headers-table tbody');
     const allTracks = Array.from(headersTbody.querySelectorAll('tr'));
     allTracks.forEach(tr => {
@@ -788,9 +820,13 @@ MusicMaker.getTrackLayout = function() {
                 layout[pitch] = [];
             }
             layout[pitch].push(tr.dataset.instrument);
+
+            if (tr.classList.contains('parent-track')) {
+                collapseState[pitch] = tr.classList.contains('collapsed');
+            }
         }
     });
-    return layout;
+    return { layout, collapseState };
 };
 
 MusicMaker.comparePitches = function(pitchA, pitchB) {

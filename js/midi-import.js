@@ -54,8 +54,6 @@ MusicMaker.MidiImport = (function() {
                 tempo = 60000000 / tempoEvent.data;
             }
         }
-        console.log('MIDI timeDivision:', timeDivision, 'tempo:', tempo);
-
         const scalingFactor = 10 / timeDivision;
 
         const notes = [];
@@ -142,205 +140,121 @@ MusicMaker.MidiImport = (function() {
         
 
         function showInstrumentModal(instruments, notes, beforeState) {
-
             const modal = document.getElementById('midi-instrument-modal');
-
             const instrumentList = document.getElementById('midi-instrument-list');
-
             const confirmBtn = document.getElementById('confirm-midi-instruments');
-
     
-
             const instrumentChunks = [];
-
             for (let i = 0; i < instruments.length; i += 5) {
-
                 instrumentChunks.push(instruments.slice(i, i + 5));
-
             }
-
     
-
             let currentChunkIndex = 0;
-
             const instrumentMap = {};
-
     
-
             function renderChunk() {
-
                 instrumentList.innerHTML = '';
-
                 const chunk = instrumentChunks[currentChunkIndex];
-
                 chunk.forEach(inst => {
-
                     const div = document.createElement('div');
-
                     div.className = 'midi-instrument-item';
-
     
-
                     const nameInput = document.createElement('input');
-
                     nameInput.type = 'text';
-
                     nameInput.value = inst.name;
-
                     nameInput.dataset.instrumentId = inst.id;
-
     
-
                     const abbrInput = document.createElement('input');
+abbrInput.type = 'text';
+abbrInput.value = inst.name.substring(0, 3).toLowerCase();
+abbrInput.dataset.instrumentId = inst.id;
 
-                    abbrInput.type = 'text';
+const select = document.createElement('select');
+const defaultOption = document.createElement('option');
+defaultOption.value = '';
+defaultOption.textContent = 'Select existing';
+select.appendChild(defaultOption);
 
-                    abbrInput.value = inst.name.substring(0, 3).toLowerCase();
+for (const instrumentName in MusicMaker.instruments) {
+    const option = document.createElement('option');
+    option.value = instrumentName;
+    option.textContent = instrumentName;
+    select.appendChild(option);
+}
 
-                    abbrInput.dataset.instrumentId = inst.id;
+// Check if an instrument with the same name already exists
+if (MusicMaker.instruments[inst.name]) {
+    select.value = inst.name;
+    abbrInput.value = MusicMaker.instruments[inst.name].exportName || inst.name.substring(0, 3).toLowerCase();
+}
 
+select.onchange = () => {
+    const selected = select.value;
+    if (selected) {
+        nameInput.value = selected;
+        abbrInput.value = MusicMaker.instruments[selected].exportName || selected.substring(0, 3).toLowerCase();
+    }
+};
     
-
-                    const select = document.createElement('select');
-
-                    const defaultOption = document.createElement('option');
-
-                    defaultOption.value = '';
-
-                    defaultOption.textContent = 'Select existing';
-
-                    select.appendChild(defaultOption);
-
-    
-
-                    for (const instrumentName in MusicMaker.instruments) {
-
-                        const option = document.createElement('option');
-
-                        option.value = instrumentName;
-
-                        option.textContent = instrumentName;
-
-                        select.appendChild(option);
-
-                    }
-
-    
-
-                    select.onchange = () => {
-
-                        const selected = select.value;
-
-                        if (selected) {
-
-                            nameInput.value = selected;
-
-                            abbrInput.value = MusicMaker.instruments[selected].exportName || selected.substring(0, 3).toLowerCase();
-
-                        }
-
-                    };
-
-    
-
                     div.appendChild(nameInput);
-
                     div.appendChild(abbrInput);
-
                     div.appendChild(select);
-
                     instrumentList.appendChild(div);
-
                 });
-
                 modal.style.display = 'flex';
-
             }
-
     
-
             confirmBtn.onclick = () => {
+    const chunk = instrumentChunks[currentChunkIndex];
+    const nameInputs = Array.from(instrumentList.querySelectorAll('input[type="text"][data-instrument-id]')).filter((v, i) => i % 2 === 0);
+    const abbrInputs = Array.from(instrumentList.querySelectorAll('input[type="text"][data-instrument-id]')).filter((v, i) => i % 2 !== 0);
 
-                const chunk = instrumentChunks[currentChunkIndex];
+    const existingInstruments = MusicMaker.instruments;
+    const newInstrumentData = new Map();
 
-                const nameInputs = instrumentList.querySelectorAll('input[type="text"][data-instrument-id]');
+    for (let i = 0; i < chunk.length; i++) {
+        const name = nameInputs[i].value.trim();
+        const abbr = abbrInputs[i].value.trim();
+        const instId = chunk[i].id;
 
-                const abbrInputs = instrumentList.querySelectorAll('input[type="text"][data-instrument-id]');
-
-    
-
-                const existingAbbrs = new Set(Object.values(MusicMaker.instruments).map(inst => inst.exportName));
-
-                const newAbbrs = new Set();
-
-    
-
-                for (let i = 0; i < chunk.length; i++) {
-
-                    const abbr = abbrInputs[i*2+1].value.trim();
-
-                    if (existingAbbrs.has(abbr) || newAbbrs.has(abbr)) {
-
-                        alert(`Abbreviation '${abbr}' is already in use. Please choose a unique abbreviation.`);
-
-                        return;
-
-                    }
-
-                    newAbbrs.add(abbr);
-
-                }
-
-    
-
-                for (let i = 0; i < chunk.length; i++) {
-
-                    const inst = chunk[i];
-
-                    const nameInput = nameInputs[i*2];
-
-                    const abbrInput = nameInputs[i*2+1];
-
-                    instrumentMap[inst.id] = {
-
-                        name: nameInput.value,
-
-                        abbreviation: abbrInput.value
-
-                    };
-
-                }
-
-    
-
-                currentChunkIndex++;
-
-                if (currentChunkIndex < instrumentChunks.length) {
-
-                    renderChunk();
-
-                } else {
-
-                    modal.style.display = 'none';
-
-                    transformAndLoad(notes, instrumentMap, beforeState);
-
-                }
-
-            };
-
-    
-
-            if (instrumentChunks.length > 0) {
-
-                renderChunk();
-
-            } else {
-
-                transformAndLoad(notes, {}, beforeState);
-
+        const existingInst = existingInstruments[name];
+        if (existingInst) {
+            if (existingInst.exportName !== abbr) {
+                alert(`Instrument '${name}' already exists with a different abbreviation ('${existingInst.exportName}'). Please use the existing abbreviation or choose a different name.`);
+                return;
             }
+        }
+        newInstrumentData.set(instId, { name, abbreviation: abbr });
+    }
 
+    // Check for duplicate abbreviations among the new instruments
+    const newAbbrs = new Set();
+    for (const data of newInstrumentData.values()) {
+        if (newAbbrs.has(data.abbreviation)) {
+            alert(`Abbreviation '${data.abbreviation}' is used more than once in the current import. Please choose unique abbreviations.`);
+            return;
+        }
+        newAbbrs.add(data.abbreviation);
+    }
+
+    for (const [instId, data] of newInstrumentData.entries()) {
+        instrumentMap[instId] = data;
+    }
+
+    currentChunkIndex++;
+    if (currentChunkIndex < instrumentChunks.length) {
+        renderChunk();
+    } else {
+        modal.style.display = 'none';
+        transformAndLoad(notes, instrumentMap, beforeState);
+    }
+};
+    
+            if (instrumentChunks.length > 0) {
+                renderChunk();
+            } else {
+                transformAndLoad(notes, {}, beforeState);
+            }
         }
 
     
@@ -1405,6 +1319,15 @@ MusicMaker.MidiImport = (function() {
 
     
 
+                    notes.forEach(note => {
+                        if (note.instrument === 'percussion') {
+                            const pitchName = `Percussion ${note.pitch}`;
+                            if (!MusicMaker.instruments[pitchName]) {
+                                const exportName = `p${note.pitch}`;
+                                MusicMaker.createCustomInstrument(pitchName, exportName);
+                            }
+                        }
+                    });
                     const octaveToSize = { 5: 'tiny', 4: 'small', 3: 'medium', 2: 'large', 1: 'huge' };
 
     
@@ -1617,11 +1540,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                        console.log('Creating new note:', newNote);
-
-    
-
-                        newNotes.push(newNote);
+                                                newNotes.push(newNote);
 
     
 

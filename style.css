@@ -1,6 +1,5 @@
 
 html, body {
-  height: 100%;
   margin: 0;
   background-color: #333;
   color: #fff;
@@ -8,55 +7,15 @@ html, body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  overflow: hidden; /* Prevent page-level scrolling */
-}
-
-#header {
-    padding: 10px;
-    border-bottom: 1px solid #444;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: #222;
-}
-
-#instrument-selector-container {
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 10px;
-}
-
-#zoom-container {
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 10px;
-}
-
-#tempo-container {
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 10px;
-}
-
-#tempo-slider {
-  width: 150px;
-  margin-left: 5px;
-}
-
-#tempo-value {
-  margin-left: 5px;
-  font-weight: bold;
-}
-
-#zoom-slider {
-  width: 150px;
-  margin-left: 5px;
+  display: flex;
+  flex-direction: column;
 }
 
 #app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
+    flex-grow: 1;
 }
 
 #main-content {

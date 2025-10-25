@@ -6,11 +6,13 @@ let undoStack = [];
 let redoStack = [];
 
 MusicMaker.createSnapshot = function() {
+    const { layout, collapseState } = MusicMaker.getTrackLayout();
     return {
         tracks: JSON.parse(JSON.stringify(MusicMaker.notes)),
         songTotalTime: songTotalTime,
-        trackLayout: MusicMaker.getTrackLayout(),
-        instruments: JSON.parse(JSON.stringify(MusicMaker.instruments))
+        trackLayout: layout,
+        instruments: JSON.parse(JSON.stringify(MusicMaker.instruments)),
+        collapseState: collapseState
     };
 }
 
@@ -20,7 +22,8 @@ MusicMaker.commitChange = function(beforeState) {
     }
     undoStack.push(beforeState);
     redoStack = []; // Clear redo stack on new change
-    MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+    const { layout, collapseState } = MusicMaker.getTrackLayout();
+    MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, layout, MusicMaker.instruments, collapseState);
 }
 
 MusicMaker.undo = function() {
@@ -30,7 +33,8 @@ MusicMaker.undo = function() {
 
         const previousState = undoStack.pop();
         MusicMaker.applyState(previousState);
-        MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+        const { layout, collapseState } = MusicMaker.getTrackLayout();
+        MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, layout, MusicMaker.instruments, collapseState);
     }
 }
 
@@ -41,7 +45,8 @@ MusicMaker.redo = function() {
 
         const nextState = redoStack.pop();
         MusicMaker.applyState(nextState);
-        MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, MusicMaker.getTrackLayout(), MusicMaker.instruments);
+        const { layout, collapseState } = MusicMaker.getTrackLayout();
+        MusicMaker.Storage.save(MusicMaker.notes, songTotalTime, layout, MusicMaker.instruments, collapseState);
     }
 }
 
@@ -50,8 +55,50 @@ MusicMaker.applyState = function(state) {
     songTotalTime = state.songTotalTime;
     MusicMaker.instruments = state.instruments;
 
-    MusicMaker.createUI(state.trackLayout);
+    const trackLayout = state.trackLayout;
+    const collapseState = state.collapseState;
+
+    MusicMaker.createUI(trackLayout, collapseState);
     MusicMaker.populateInstrumentSelector();
+
+    // Ensure all tracks for notes exist before rendering
+    const tracksToCreate = new Map();
+    MusicMaker.notes.forEach(note => {
+        const trackExists = MusicMaker.tracks.some(t => t.pitch === note.pitch && t.instrumentName === note.instrumentName);
+        if (!trackExists) {
+            if (note.pitch === 'Percussion') {
+                if (!tracksToCreate.has('Percussion')) {
+                    tracksToCreate.set('Percussion', new Set());
+                }
+                tracksToCreate.get('Percussion').add(note.instrumentName);
+            } else {
+                if (!tracksToCreate.has(note.pitch)) {
+                    tracksToCreate.set(note.pitch, new Set());
+                }
+                tracksToCreate.get(note.pitch).add(note.instrumentName);
+            }
+        }
+    });
+
+    tracksToCreate.forEach((instruments, pitch) => {
+        if (pitch === 'Percussion') {
+            const parentTrack = document.querySelector(`.parent-track[data-pitch="Percussion"]`);
+            if (parentTrack) {
+                instruments.forEach(instrumentName => {
+                    MusicMaker.addTrack('Percussion', 'medium', false, parentTrack, instrumentName, true);
+                });
+            }
+        } else {
+            const parentTrack = document.querySelector(`.parent-track[data-pitch="${pitch}"]`);
+            if (parentTrack) {
+                const size = parentTrack.dataset.size;
+                instruments.forEach(instrumentName => {
+                    MusicMaker.addTrack(pitch, size, false, parentTrack, instrumentName, true);
+                });
+            }
+        }
+    });
+
     MusicMaker.renderAllNotes();
     updateTimelineWidth();
     MusicMaker.setupEventListeners();
@@ -234,6 +281,7 @@ MusicMaker.setupEventListeners = function() {
 document.addEventListener('DOMContentLoaded', () => {
     const savedState = MusicMaker.Storage.load();
     let trackLayout = null;
+    let collapseState = null;
 
     // Initialize instruments
     if (savedState && savedState.instruments) {
@@ -246,7 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
         trackLayout = savedState.trackLayout;
     }
 
-    MusicMaker.createUI(trackLayout);
+    if (savedState && savedState.collapseState) {
+        collapseState = savedState.collapseState;
+    }
+
+    MusicMaker.createUI(trackLayout, collapseState);
     MusicMaker.populateInstrumentSelector();
     MusicMaker.setupEventListeners();
     MusicMaker.setupCursorEventListeners();
@@ -257,15 +309,27 @@ document.addEventListener('DOMContentLoaded', () => {
         MusicMaker.renderAllNotes();
         updateTimelineWidth();
 
-        // Expand parent tracks that have children
+        // Restore collapse state
         const parentTracks = document.querySelectorAll('.parent-track');
         parentTracks.forEach(parent => {
             const pitch = parent.dataset.pitch;
-            const childTracks = document.querySelectorAll(`.child-track[data-pitch="${pitch}"]`);
-            if (childTracks.length > 0) {
+            if (collapseState && collapseState[pitch]) {
+                parent.classList.add('collapsed');
                 const expandBtn = parent.querySelector('.expand-btn');
                 if (expandBtn) {
-                    expandBtn.click();
+                    expandBtn.innerHTML = '&#9654;';
+                }
+                let nextHeaderRow = parent.nextElementSibling;
+                while (nextHeaderRow && nextHeaderRow.classList.contains('child-track') && nextHeaderRow.dataset.pitch === pitch) {
+                    const timelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${pitch}"][data-instrument="${nextHeaderRow.dataset.instrument}"]`);
+                    nextHeaderRow.style.display = 'none';
+                    if (timelineRow) timelineRow.style.display = 'none';
+                    nextHeaderRow = nextHeaderRow.nextElementSibling;
+                }
+            } else {
+                const expandBtn = parent.querySelector('.expand-btn');
+                if (expandBtn) {
+                    expandBtn.innerHTML = '&#9660;';
                 }
             }
         });
