@@ -2,3 +2,6 @@
 	path = vendor/SoundOfSteam
 	url = https://github.com/CSOS-Team/SoundOfSteam.git
 	branch = 1.21-neoforge
+[submodule "vendor/midi-parser-js"]
+	path = vendor/midi-parser-js
+	url = https://github.com/colxi/midi-parser-js
