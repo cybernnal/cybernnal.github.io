@@ -385,197 +385,1371 @@ MusicMaker.MidiImport = (function() {
 
     
 
-        function transformAndLoad(notes, instrumentMap, beforeState) {
-
-            const newNotes = [];
-
-            const midiTrackLayout = {};
-
-            let songTotalTime = 0;
+                        function transformAndLoad(notes, instrumentMap, beforeState) {
 
     
 
-            // Create new instruments
-
-            for (const instId in instrumentMap) {
-
-                const inst = instrumentMap[instId];
-
-                if (!MusicMaker.instruments[inst.name]) {
-
-                    MusicMaker.createCustomInstrument(inst.name, inst.abbreviation);
-
-                }
-
-            }
+                            const newNotes = [];
 
     
 
-            notes.forEach(note => {
-
-                const instrument = instrumentMap[note.instrument];
-
-                if (!instrument) return;
+        
 
     
 
-                let fullPitchName;
+                    const midiTrackLayout = {};
 
-                if (note.instrument === 'percussion') {
+    
 
-                    const pitchName = `Percussion ${note.pitch}`;
+        
 
-                    fullPitchName = 'Percussion';
+    
 
-                    if (!midiTrackLayout[fullPitchName]) {
+                    let songTotalTime = 0;
 
-                        midiTrackLayout[fullPitchName] = [];
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    // Create new instruments
+
+    
+
+        
+
+    
+
+                    for (const instId in instrumentMap) {
+
+    
+
+        
+
+    
+
+                        const inst = instrumentMap[instId];
+
+    
+
+        
+
+    
+
+                        if (!MusicMaker.instruments[inst.name]) {
+
+    
+
+        
+
+    
+
+                            MusicMaker.createCustomInstrument(inst.name, inst.abbreviation);
+
+    
+
+        
+
+    
+
+                        }
+
+    
+
+        
+
+    
 
                     }
 
-                    if (!midiTrackLayout[fullPitchName].includes(pitchName)) {
+    
 
-                        midiTrackLayout[fullPitchName].push(pitchName);
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                notes.forEach(note => {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    const instrument = instrumentMap[note.instrument];
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    if (!instrument) {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        return;
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    let fullPitchName;
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    if (note.instrument === 'percussion') {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        const pitchName = `Percussion ${note.pitch}`;
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        fullPitchName = 'Percussion';
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        if (!midiTrackLayout[fullPitchName]) {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                            midiTrackLayout[fullPitchName] = [];
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        if (!midiTrackLayout[fullPitchName].includes(pitchName)) {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                            midiTrackLayout[fullPitchName].push(pitchName);
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    } else {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        fullPitchName = midiPitchToAppName(note.pitch);
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        if (!midiTrackLayout[fullPitchName]) {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                            midiTrackLayout[fullPitchName] = [];
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        if (!midiTrackLayout[fullPitchName].includes(instrument.name)) {
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                            midiTrackLayout[fullPitchName].push(instrument.name);
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                    }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                });
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                const fullTrackLayout = {};
+
+    
+
+        
+
+    
+
+                    const SIZES = ['tiny', 'small', 'medium', 'large', 'huge'];
+
+    
+
+        
+
+    
+
+                    const OCTAVE_PITCH_NAMES = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
+
+    
+
+        
+
+    
+
+                    SIZES.forEach((size, index) => {
+
+    
+
+        
+
+    
+
+                        const octaveNum = 5 - index;
+
+    
+
+        
+
+    
+
+                        OCTAVE_PITCH_NAMES.forEach(pitchName => {
+
+    
+
+        
+
+    
+
+                            const fullPitchName = pitchName + octaveNum;
+
+    
+
+        
+
+    
+
+                            fullTrackLayout[fullPitchName] = midiTrackLayout[fullPitchName] || [];
+
+    
+
+        
+
+    
+
+                        });
+
+    
+
+        
+
+    
+
+                    });
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    if (midiTrackLayout['Percussion']) {
+
+    
+
+        
+
+    
+
+                        fullTrackLayout['Percussion'] = midiTrackLayout['Percussion'];
+
+    
+
+        
+
+    
 
                     }
 
-                } else {
+    
 
-                    fullPitchName = midiPitchToAppName(note.pitch);
+        
 
-                    if (!midiTrackLayout[fullPitchName]) {
+    
 
-                        midiTrackLayout[fullPitchName] = [];
+            
 
-                    }
+    
 
-                    if (!midiTrackLayout[fullPitchName].includes(instrument.name)) {
+        
 
-                        midiTrackLayout[fullPitchName].push(instrument.name);
+    
 
-                    }
+                    const octaveToSize = { 5: 'tiny', 4: 'small', 3: 'medium', 2: 'large', 1: 'huge' };
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    notes.forEach(note => {
+
+    
+
+        
+
+    
+
+                        const instrument = instrumentMap[note.instrument];
+
+    
+
+        
+
+    
+
+                        if (!instrument) return;
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        let pitchName, size, fullPitchName;
+
+    
+
+        
+
+    
+
+                        if (note.instrument === 'percussion') {
+
+    
+
+        
+
+    
+
+                            pitchName = `Percussion ${note.pitch}`;
+
+    
+
+        
+
+    
+
+                            size = 'medium';
+
+    
+
+        
+
+    
+
+                            fullPitchName = 'Percussion';
+
+    
+
+        
+
+    
+
+                        } else {
+
+    
+
+        
+
+    
+
+                            const appPitch = midiPitchToAppName(note.pitch);
+
+    
+
+        
+
+    
+
+                            const octave = parseInt(appPitch.slice(-1), 10);
+
+    
+
+        
+
+    
+
+                            pitchName = appPitch.slice(0, -1);
+
+    
+
+        
+
+    
+
+                            size = octaveToSize[octave] || 'medium';
+
+    
+
+        
+
+    
+
+                            fullPitchName = appPitch;
+
+    
+
+        
+
+    
+
+                        }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        const newNote = {
+
+    
+
+        
+
+    
+
+                            id: Date.now() + Math.random(),
+
+    
+
+        
+
+    
+
+                            size: size,
+
+    
+
+        
+
+    
+
+                            instrumentName: note.instrument === 'percussion' ? pitchName : instrument.name,
+
+    
+
+        
+
+    
+
+                            pitch: fullPitchName,
+
+    
+
+        
+
+    
+
+                            start: note.start,
+
+    
+
+        
+
+    
+
+                            duration: note.duration
+
+    
+
+        
+
+    
+
+                        };
+
+    
+
+                        console.log('Creating new note:', newNote);
+
+    
+
+                        newNotes.push(newNote);
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                        const endTime = note.start + note.duration;
+
+    
+
+        
+
+    
+
+                        if (endTime > songTotalTime) {
+
+    
+
+        
+
+    
+
+                            songTotalTime = endTime;
+
+    
+
+        
+
+    
+
+                        }
+
+    
+
+        
+
+    
+
+                    });
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    MusicMaker.applyState({
+
+    
+
+        
+
+    
+
+                        tracks: newNotes,
+
+    
+
+        
+
+    
+
+                        songTotalTime: songTotalTime + 100,
+
+    
+
+        
+
+    
+
+                        trackLayout: fullTrackLayout,
+
+    
+
+        
+
+    
+
+                        instruments: MusicMaker.instruments
+
+    
+
+        
+
+    
+
+                    });
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                    MusicMaker.commitChange(beforeState);
+
+    
+
+        
+
+    
 
                 }
-
-            });
-
-    
-
-            const fullTrackLayout = {};
-
-            const SIZES = ['tiny', 'small', 'medium', 'large', 'huge'];
-
-            const OCTAVE_PITCH_NAMES = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
-
-            SIZES.forEach((size, index) => {
-
-                const octaveNum = 5 - index;
-
-                OCTAVE_PITCH_NAMES.forEach(pitchName => {
-
-                    const fullPitchName = pitchName + octaveNum;
-
-                    fullTrackLayout[fullPitchName] = midiTrackLayout[fullPitchName] || [];
-
-                });
-
-            });
-
-    
-
-            if (midiTrackLayout['Percussion']) {
-
-                fullTrackLayout['Percussion'] = midiTrackLayout['Percussion'];
-
-            }
-
-    
-
-            const octaveToSize = { 5: 'tiny', 4: 'small', 3: 'medium', 2: 'large', 1: 'huge' };
-
-    
-
-            notes.forEach(note => {
-
-                const instrument = instrumentMap[note.instrument];
-
-                if (!instrument) return;
-
-    
-
-                let pitchName, size, fullPitchName;
-
-                if (note.instrument === 'percussion') {
-
-                    pitchName = `Percussion ${note.pitch}`;
-
-                    size = 'medium';
-
-                    fullPitchName = 'Percussion';
-
-                } else {
-
-                    const appPitch = midiPitchToAppName(note.pitch);
-
-                    const octave = parseInt(appPitch.slice(-1), 10);
-
-                    pitchName = appPitch.slice(0, -1);
-
-                    size = octaveToSize[octave] || 'medium';
-
-                    fullPitchName = appPitch;
-
-                }
-
-    
-
-                newNotes.push({
-
-                    id: Date.now() + Math.random(),
-
-                    size: size,
-
-                    instrumentName: note.instrument === 'percussion' ? pitchName : instrument.name,
-
-                    pitch: fullPitchName,
-
-                    start: note.start,
-
-                    duration: note.duration
-
-                });
-
-    
-
-                const endTime = note.start + note.duration;
-
-                if (endTime > songTotalTime) {
-
-                    songTotalTime = endTime;
-
-                }
-
-            });
-
-    
-
-            MusicMaker.applyState({
-
-                tracks: newNotes,
-
-                songTotalTime: songTotalTime + 100,
-
-                trackLayout: fullTrackLayout,
-
-                instruments: MusicMaker.instruments
-
-            });
-
-    
-
-            MusicMaker.commitChange(beforeState);
-
-        }
 
     return {
         importMidi: importMidi

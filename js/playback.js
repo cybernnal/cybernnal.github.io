@@ -12,11 +12,11 @@ class Playback {
         this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
 
         this.compressor = this.audioContext.createDynamicsCompressor();
-        this.compressor.threshold.setValueAtTime(-30, this.audioContext.currentTime);
-        this.compressor.knee.setValueAtTime(30, this.audioContext.currentTime);
-        this.compressor.ratio.setValueAtTime(20, this.audioContext.currentTime);
-        this.compressor.attack.setValueAtTime(0.001, this.audioContext.currentTime);
-        this.compressor.release.setValueAtTime(0.3, this.audioContext.currentTime);
+        this.compressor.threshold.setValueAtTime(-25, this.audioContext.currentTime);
+        this.compressor.knee.setValueAtTime(35, this.audioContext.currentTime);
+        this.compressor.ratio.setValueAtTime(15, this.audioContext.currentTime);
+        this.compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+        this.compressor.release.setValueAtTime(0.2, this.audioContext.currentTime);
         this.compressor.connect(this.audioContext.destination);
 
         console.log('Playback constructor called');

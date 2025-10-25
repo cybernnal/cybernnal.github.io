@@ -174,26 +174,32 @@ MusicMaker.createUI = function(trackLayout = null) {
     mainContent.appendChild(timelineContainer);
     appContainer.appendChild(mainContent);
 
-    // Loop through each size to create 5 distinct blocks
+    // Create the default 5 octaves
     SIZES.forEach((size, index) => {
         const octaveNum = 5 - index; // 5 for tiny, 4 for small, etc.
-
-        // Create the rows for this octave block
         MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
             const fullPitchName = pitchName + octaveNum;
-            if (trackLayout && trackLayout.hasOwnProperty(fullPitchName)) {
-                let instruments = trackLayout[fullPitchName];
-                if (instruments.length === 0) {
-                    instruments.push('diapason');
-                }
-                instruments.forEach((instrumentName, instrumentIndex) => {
-                    MusicMaker.addTrack(fullPitchName, size, false, null, instrumentName, instrumentIndex > 0);
-                });
-            } else if (!trackLayout) {
-                MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false);
-            }
+            MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false);
         });
     });
+
+    // Add tracks from the trackLayout
+    if (trackLayout) {
+        for (const fullPitchName in trackLayout) {
+            if (trackLayout.hasOwnProperty(fullPitchName) && fullPitchName !== 'Percussion') {
+                const instruments = trackLayout[fullPitchName];
+                instruments.forEach((instrumentName) => {
+                    if (instrumentName !== 'diapason') {
+                        const octaveNum = parseInt(fullPitchName.slice(-1));
+                        const size = SIZES[5 - octaveNum];
+                        const parentTrack = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
+                        MusicMaker.addTrack(fullPitchName, size, false, parentTrack, instrumentName, true);
+                    }
+                });
+            }
+        }
+    }
+
 
     if (trackLayout && trackLayout['Percussion']) {
         const percussionInstruments = trackLayout['Percussion'];
@@ -481,6 +487,7 @@ MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
 };
 
 MusicMaker.renderNote = function(note) {
+    console.log('Rendering note:', note);
     const track = MusicMaker.tracks.find(t => t.pitch === note.pitch && t.instrumentName === note.instrumentName);
     if (!track) {
         console.warn('Track not found for note:', note);
