@@ -1,6 +1,15 @@
 let songTotalTime = 0;
 var MusicMaker = MusicMaker || {};
 
+MusicMaker.getNoteSize = function(note) {
+    const octave = parseInt(note.pitch.replace(/[^0-9]/g, ''), 10);
+    if (octave <= 1) return 'huge';
+    if (octave === 2) return 'large';
+    if (octave === 3) return 'medium';
+    if (octave === 4) return 'small';
+    return 'tiny';
+};
+
 const UNDO_LIMIT = 20;
 let undoStack = [];
 let redoStack = [];
@@ -59,7 +68,13 @@ MusicMaker.applyState = function(state) {
     const trackLayout = state.trackLayout;
     const collapseState = state.collapseState;
 
-    MusicMaker.createUI(trackLayout, collapseState);
+    if (trackLayout) {
+        const trackPitches = MusicMaker.ALL_PITCH_NAMES.filter(pitch => trackLayout.hasOwnProperty(pitch));
+        MusicMaker.createUI(trackPitches, trackLayout, collapseState);
+    } else {
+        MusicMaker.createUI(null, null, collapseState);
+    }
+
     MusicMaker.populateInstrumentSelector();
 
     // Ensure all tracks for notes exist before rendering
@@ -303,13 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (savedState && savedState.trackLayout) {
         trackLayout = savedState.trackLayout;
+        const trackPitches = MusicMaker.ALL_PITCH_NAMES.filter(pitch => trackLayout.hasOwnProperty(pitch));
+        MusicMaker.createUI(trackPitches, trackLayout, collapseState);
+    } else {
+        MusicMaker.createUI(null, null, collapseState);
     }
-
-    if (savedState && savedState.collapseState) {
-        collapseState = savedState.collapseState;
-    }
-
-    MusicMaker.createUI(trackLayout, collapseState);
     MusicMaker.populateInstrumentSelector();
     MusicMaker.setupEventListeners();
     MusicMaker.setupCursorEventListeners();
@@ -437,6 +450,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const beforeState = MusicMaker.createSnapshot();
         const selectedNotes = Array.from(document.querySelectorAll('.note.selected'));
         if (selectedNotes.length === 0) return;
+
+        // Validation logic
+        for (const noteElement of selectedNotes) {
+            const noteId = noteElement.dataset.noteId;
+            const note = MusicMaker.notes.find(n => String(n.id) === noteId);
+            if (note) {
+                const noteSize = MusicMaker.getNoteSize(note);
+                const instrumentData = MusicMaker.instrumentData.instruments[instrumentName];
+                if (instrumentData && !instrumentData.sizes.includes(noteSize)) {
+                    alert(`Instrument "${instrumentName}" does not support the size "${noteSize}" for the note "${note.pitch}".`);
+                    instrumentSelector.value = note.instrumentName; // Revert selector
+                    return;
+                }
+            }
+        }
 
         const tracksToChange = new Map();
         selectedNotes.forEach(noteElement => {

@@ -4,6 +4,7 @@ class Playback {
     constructor() {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.soundBuffer = null;
+        this.instrumentBuffers = {};
         this.isPlaying = false;
         this.startTime = 0;
         this.playbackPosition = 0;
@@ -23,7 +24,8 @@ class Playback {
         this.gainNode.connect(this.audioContext.destination);
 
         console.log('Playback constructor called');
-        this.loadSound('/sound.ogg');
+        this.loadSound('sound.ogg').then(buffer => this.soundBuffer = buffer);
+        this.loadAllInstrumentSounds();
     }
 
     setVolume(volume) {
@@ -35,10 +37,27 @@ class Playback {
             console.log('Loading sound from:', url);
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
-            this.soundBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-            console.log('Sound loaded successfully:', this.soundBuffer);
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+            console.log('Sound loaded successfully:', audioBuffer);
+            return audioBuffer;
         } catch (error) {
             console.error('Error loading sound:', error);
+        }
+    }
+
+    async loadAllInstrumentSounds() {
+        try {
+            const response = await fetch('js/instrument-sounds.json');
+            const instrumentSounds = await response.json();
+            for (const instrument in instrumentSounds) {
+                this.instrumentBuffers[instrument] = {};
+                for (const size in instrumentSounds[instrument]) {
+                    const url = instrumentSounds[instrument][size];
+                    this.instrumentBuffers[instrument][size] = await this.loadSound(url);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading instrument sounds:', error);
         }
     }
 
@@ -56,11 +75,11 @@ class Playback {
         return midi;
     }
 
-    calculatePlaybackRate(note) {
+
+    calculatePlaybackRate(note, baseNoteName) {
         if (note.pitch.startsWith('Percussion')) {
             return 1;
         }
-        const baseNoteName = 'F#3';
         const baseMidi = this.noteToMidi(baseNoteName);
         const targetMidi = this.noteToMidi(note.pitch);
 
@@ -76,8 +95,7 @@ class Playback {
 
     play() {
         console.log('Play called');
-        if (this.isPlaying || !this.soundBuffer) {
-            console.log('Cannot play, isPlaying:', this.isPlaying, 'soundBuffer:', this.soundBuffer);
+        if (this.isPlaying) {
             return;
         }
         this.isPlaying = true;
@@ -92,10 +110,26 @@ class Playback {
         const timeUnit = 0.05 * this.currentTempo;
 
         MusicMaker.notes.forEach(note => {
+            const instrumentName = note.instrumentName;
+            const noteSize = MusicMaker.getNoteSize(note);
+            let buffer = this.soundBuffer;
+            let baseNote = 'F#3';
+
+            if (this.instrumentBuffers[instrumentName] && this.instrumentBuffers[instrumentName][noteSize]) {
+                buffer = this.instrumentBuffers[instrumentName][noteSize];
+                const octave = parseInt(note.pitch.replace(/[^0-9]/g, ''), 10);
+                baseNote = `F#${octave}`;
+            }
+
+            if (!buffer) {
+                console.warn(`No buffer for instrument ${instrumentName} and size ${noteSize}`);
+                return;
+            }
+
             const source = this.audioContext.createBufferSource();
-            source.buffer = this.soundBuffer;
+            source.buffer = buffer;
             source.loop = true;
-            source.playbackRate.value = this.calculatePlaybackRate(note);
+            source.playbackRate.value = this.calculatePlaybackRate(note, baseNote);
             source.connect(this.compressor);
 
             const noteStartTimeInSeconds = note.start * timeUnit;

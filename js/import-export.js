@@ -12,13 +12,17 @@ MusicMaker.importTracks = function(beforeState) {
         reader.onload = e => {
             const content = e.target.result;
             const songData = MusicMaker.parseAndLoadSong(content);
+
+            const trackPitches = MusicMaker.ALL_PITCH_NAMES.filter(pitch => songData.trackLayout.hasOwnProperty(pitch));
+
+            MusicMaker.createUI(trackPitches, songData.trackLayout);
+
             MusicMaker.notes = songData.tracks;
             songTotalTime = songData.totalTime;
 
             const bestTempo = MusicMaker.findBestTempo(songData.allDurations);
             MusicMaker.setTempo(bestTempo);
 
-            MusicMaker.createUI(songData.trackLayout);
             MusicMaker.populateInstrumentSelector();
             MusicMaker.setupEventListeners();
             

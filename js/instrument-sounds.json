@@ -1,0 +1,63 @@
+{
+  "gedeckt": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gedeckt/g_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gedeckt/g_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gedeckt/g_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gedeckt/g_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gedeckt/g_deep.ogg"
+  },
+  "diapason": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/diapason/d_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/diapason/d_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/diapason/d_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/diapason/d_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/diapason/d_deep.ogg"
+  },
+  "gamba": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gamba/gm_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gamba/gm_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gamba/gm_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gamba/gm_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/gamba/gm_deep.ogg"
+  },
+  "piccolo": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/piccolo/p_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/piccolo/p_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/piccolo/p_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/piccolo/p_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/piccolo/p_deep.ogg"
+  },
+  "subbass": {
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/subbass/s_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/subbass/s_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/subbass/s_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/subbass/s_deep.ogg"
+  },
+  "trompette": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/trompette/t_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/trompette/t_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/trompette/t_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/trompette/t_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/trompette/t_deep.ogg"
+  },
+  "nasard": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/nasard/n_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/nasard/n_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/nasard/n_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/nasard/n_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/nasard/n_deep.ogg"
+  },
+  "posaune": {
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/posaune/ps_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/posaune/ps_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/posaune/ps_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/posaune/ps_deep.ogg"
+  },
+  "vox_humana": {
+    "tiny": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_superhigh.ogg",
+    "small": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_high.ogg",
+    "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_medium.ogg",
+    "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_low.ogg",
+    "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_deep.ogg"
+  }
+}

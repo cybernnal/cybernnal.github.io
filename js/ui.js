@@ -124,7 +124,7 @@ MusicMaker.populateInstrumentSelector = function() {
     selector.appendChild(customOption);
 };
 
-MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
+MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapseState = null) {
     MusicMaker.tracks = [];
     const appContainer = document.getElementById('app-container');
     appContainer.innerHTML = ''; // Clear previous UI
@@ -176,9 +176,9 @@ MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
 
     const createdPitches = new Set();
 
-    // Add tracks from the trackLayout
-    if (trackLayout) {
-        for (const fullPitchName in trackLayout) {
+    // Add tracks from the trackPitches array
+    if (trackPitches) {
+        trackPitches.forEach(fullPitchName => {
             if (trackLayout.hasOwnProperty(fullPitchName) && fullPitchName !== 'Percussion') {
                 const instruments = trackLayout[fullPitchName];
                 if (instruments.length > 0) {
@@ -196,7 +196,7 @@ MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
                     }
                 }
             }
-        }
+        });
     }
 
     // Create the default 5 octaves for any pitches not in the layout
@@ -242,6 +242,29 @@ MusicMaker.createUI = function(trackLayout = null, collapseState = null) {
             }
         });
     }
+
+    // Sort the tracks in the DOM
+    setTimeout(() => {
+        const headersTbody = document.querySelector('#track-headers-table tbody');
+        const timelineTbody = document.querySelector('#timeline-table tbody');
+        const headerRows = Array.from(headersTbody.querySelectorAll('tr'));
+        const timelineRows = Array.from(timelineTbody.querySelectorAll('tr'));
+
+        const sortedHeaderRows = headerRows.sort((a, b) => {
+            const pitchA = a.dataset.pitch;
+            const pitchB = b.dataset.pitch;
+            return MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA) - MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
+        });
+
+        const sortedTimelineRows = timelineRows.sort((a, b) => {
+            const pitchA = a.dataset.pitch;
+            const pitchB = b.dataset.pitch;
+            return MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA) - MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
+        });
+
+        sortedHeaderRows.forEach(row => headersTbody.appendChild(row));
+        sortedTimelineRows.forEach(row => timelineTbody.appendChild(row));
+    }, 0);
 };
 
 MusicMaker.createCustomInstrument = function(displayName, exportName) {
