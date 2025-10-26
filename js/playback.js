@@ -12,16 +12,20 @@ class Playback {
         this.playingSources = [];
         this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
 
-        this.compressor = this.audioContext.createDynamicsCompressor();
-        this.compressor.threshold.setValueAtTime(-25, this.audioContext.currentTime);
-        this.compressor.knee.setValueAtTime(35, this.audioContext.currentTime);
-        this.compressor.ratio.setValueAtTime(15, this.audioContext.currentTime);
-        this.compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
-        this.compressor.release.setValueAtTime(0.2, this.audioContext.currentTime);
-
+        this.preGainNode = this.audioContext.createGain();
+        this.preGainNode.gain.value = 0.5;
         this.gainNode = this.audioContext.createGain();
-        this.compressor.connect(this.gainNode);
-        this.gainNode.connect(this.audioContext.destination);
+        this.preGainNode.connect(this.gainNode);
+
+        this.compressor = this.audioContext.createDynamicsCompressor();
+        this.compressor.threshold.setValueAtTime(-24, this.audioContext.currentTime);
+        this.compressor.knee.setValueAtTime(30, this.audioContext.currentTime);
+        this.compressor.ratio.setValueAtTime(4, this.audioContext.currentTime);
+        this.compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+        this.compressor.release.setValueAtTime(0.25, this.audioContext.currentTime);
+
+        this.gainNode.connect(this.compressor);
+        this.compressor.connect(this.audioContext.destination);
 
         console.log('Playback constructor called');
         this.loadSound('sound.ogg').then(buffer => this.soundBuffer = buffer);
@@ -130,7 +134,7 @@ class Playback {
             source.buffer = buffer;
             source.loop = true;
             source.playbackRate.value = this.calculatePlaybackRate(note, baseNote);
-            source.connect(this.compressor);
+            source.connect(this.preGainNode);
 
             const noteStartTimeInSeconds = note.start * timeUnit;
             const noteDurationInSeconds = note.duration * timeUnit;
