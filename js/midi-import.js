@@ -226,16 +226,6 @@ select.onchange = () => {
         newInstrumentData.set(instId, { name, abbreviation: abbr });
     }
 
-    // Check for duplicate abbreviations among the new instruments
-    const newAbbrs = new Set();
-    for (const data of newInstrumentData.values()) {
-        if (newAbbrs.has(data.abbreviation)) {
-            alert(`Abbreviation '${data.abbreviation}' is used more than once in the current import. Please choose unique abbreviations.`);
-            return;
-        }
-        newAbbrs.add(data.abbreviation);
-    }
-
     for (const [instId, data] of newInstrumentData.entries()) {
         instrumentMap[instId] = data;
     }
