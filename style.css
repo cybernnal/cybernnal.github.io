@@ -1,4 +1,3 @@
-
 html, body {
   height: 100vh;
   overflow: hidden;
@@ -238,6 +237,12 @@ html, body {
 .key--black {
   background-color: #000;
   color: #fff;
+}
+
+.key--percussion {
+  background-color: #ccc;
+  color: #000;
+  justify-content: flex-end;
 }
 
 tr.highlighted .key {

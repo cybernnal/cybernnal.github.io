@@ -214,9 +214,8 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
 
     if (trackLayout && trackLayout['Percussion']) {
         const percussionInstruments = trackLayout['Percussion'];
-        MusicMaker.addTrack('Percussion', 'medium', false, null, 'Percussion', false);
-        percussionInstruments.forEach(instrumentName => {
-            MusicMaker.addTrack('Percussion', 'medium', false, null, instrumentName, true);
+        percussionInstruments.forEach((instrumentName, index) => {
+            MusicMaker.addTrack('Percussion', 'medium', false, null, instrumentName, false, true, index);
         });
     }
 
@@ -253,12 +252,20 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
         const sortedHeaderRows = headerRows.sort((a, b) => {
             const pitchA = a.dataset.pitch;
             const pitchB = b.dataset.pitch;
+
+            if (pitchA === 'Percussion') return 1;
+            if (pitchB === 'Percussion') return -1;
+
             return MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA) - MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
         });
 
         const sortedTimelineRows = timelineRows.sort((a, b) => {
             const pitchA = a.dataset.pitch;
             const pitchB = b.dataset.pitch;
+
+            if (pitchA === 'Percussion') return 1;
+            if (pitchB === 'Percussion') return -1;
+
             return MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA) - MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
         });
 
@@ -288,7 +295,7 @@ MusicMaker.createCustomInstrument = function(displayName, exportName) {
     selector.insertBefore(option, selector.lastChild);
 };
 
-MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false, isCollapsed = true) {
+MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false, isCollapsed = true, percIndex = -1) {
     const headersTbody = document.querySelector('#track-headers-table tbody');
     const timelineTbody = document.querySelector('#timeline-table tbody');
 
@@ -313,7 +320,9 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     trTimeline.dataset.pitch = fullPitchName;
     trTimeline.dataset.instrument = newInstrumentName;
 
-    if (isChild) {
+    const isPercussion = fullPitchName === 'Percussion';
+
+    if (isChild && !isPercussion) {
         trHeader.classList.add('child-track');
         trTimeline.classList.add('child-track');
     } else {
@@ -334,15 +343,18 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
 
     const key = document.createElement('div');
     const isBlackKey = fullPitchName.includes('#');
-    const isPercussion = fullPitchName === 'Percussion';
     key.className = `key ${isBlackKey ? 'key--black' : 'key--white'} ${isPercussion ? 'key--percussion' : ''}`;
-    key.textContent = isChild && isPercussion ? instrumentName : fullPitchName;
+    if (isPercussion) {
+        key.textContent = `Perc ${percIndex + 1}`;
+    } else {
+        key.textContent = fullPitchName;
+    }
 
     const trackControls = document.createElement('div');
     trackControls.className = 'track-controls';
 
-    if (!isChild) { // This is now a parent track
-        if (isCollapsed) {
+    if (!isChild || isPercussion) { // This is now a parent track OR a percussion track
+        if (isCollapsed && !isPercussion) {
             trHeader.classList.add('collapsed');
         }
         const expandBtn = document.createElement('button');
@@ -350,39 +362,38 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;'; // Right or down triangle
         expandBtn.style.visibility = 'hidden'; // Initially hidden
 
-        expandBtn.onclick = (e) => {
-            e.stopPropagation();
-            const beforeState = MusicMaker.createSnapshot();
-            trHeader.classList.toggle('collapsed');
-            const isNowCollapsed = trHeader.classList.contains('collapsed');
-            expandBtn.innerHTML = isNowCollapsed ? '&#9654;' : '&#9660;';
+        if (!isPercussion) {
+            expandBtn.onclick = (e) => {
+                e.stopPropagation();
+                const beforeState = MusicMaker.createSnapshot();
+                trHeader.classList.toggle('collapsed');
+                const isNowCollapsed = trHeader.classList.contains('collapsed');
+                expandBtn.innerHTML = isNowCollapsed ? '&#9654;' : '&#9660;';
 
-            let nextHeaderRow = trHeader.nextElementSibling;
-            while (nextHeaderRow && nextHeaderRow.classList.contains('child-track') && nextHeaderRow.dataset.pitch === fullPitchName) {
-                const timelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${fullPitchName}"][data-instrument="${nextHeaderRow.dataset.instrument}"]`);
-                nextHeaderRow.style.display = isNowCollapsed ? 'none' : 'table-row';
-                if (timelineRow) timelineRow.style.display = isNowCollapsed ? 'none' : 'table-row';
-                nextHeaderRow = nextHeaderRow.nextElementSibling;
-            }
-            MusicMaker.commitChange(beforeState);
-        };
-        trackControls.appendChild(expandBtn);
+                let nextHeaderRow = trHeader.nextElementSibling;
+                while (nextHeaderRow && nextHeaderRow.classList.contains('child-track') && nextHeaderRow.dataset.pitch === fullPitchName) {
+                    const timelineRow = document.querySelector(`#timeline-table tbody tr[data-pitch="${fullPitchName}"][data-instrument="${nextHeaderRow.dataset.instrument}"]`);
+                    nextHeaderRow.style.display = isNowCollapsed ? 'none' : 'table-row';
+                    if (timelineRow) timelineRow.style.display = isNowCollapsed ? 'none' : 'table-row';
+                    nextHeaderRow = nextHeaderRow.nextElementSibling;
+                }
+                MusicMaker.commitChange(beforeState);
+            };
+            trackControls.appendChild(expandBtn);
 
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-btn';
-        addBtn.textContent = '+';
-        if (isPercussion) {
-            addBtn.style.display = 'none';
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-btn';
+            addBtn.textContent = '+';
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (trHeader.classList.contains('collapsed')) {
+                    expandBtn.click();
+                }
+                MusicMaker.addTrack(fullPitchName, size, true, trHeader, undefined, true, false);
+                expandBtn.style.visibility = 'visible';
+            };
+            trackControls.appendChild(addBtn);
         }
-        addBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (trHeader.classList.contains('collapsed')) {
-                expandBtn.click();
-            }
-            MusicMaker.addTrack(fullPitchName, size, true, trHeader, undefined, true, false);
-            expandBtn.style.visibility = 'visible';
-        };
-        trackControls.appendChild(addBtn);
 
     } else { // Child track
         const deleteBtn = document.createElement('button');
