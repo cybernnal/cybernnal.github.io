@@ -565,13 +565,11 @@ MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
 MusicMaker.renderNote = function(note) {
     const track = MusicMaker.tracks.find(t => t.pitch === note.pitch && t.instrumentName === note.instrumentName);
     if (!track) {
-        console.warn('Track not found for note:', note);
         return;
     }
     const timeline = track.timeline;
 
     if (!timeline) {
-        console.warn(`Timeline not found for note and could not be created:`, note);
         return;
     }
 

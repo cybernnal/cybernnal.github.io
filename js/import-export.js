@@ -83,7 +83,6 @@ MusicMaker.parseAndLoadSong = function(content) {
         const duration = Number(durationStr);
 
         if (isNaN(duration)) {
-            console.error(`Invalid number format in part: ${part}`);
             return;
         }
         allDurations.push(duration);
@@ -140,7 +139,6 @@ MusicMaker.parseAndLoadSong = function(content) {
                     pitchName = rest.slice(-1);
                     exportName = rest.slice(0, -1);
                 } else {
-                    console.error('Failed to parse note info:', noteInfo);
                     return;
                 }
 
@@ -156,7 +154,6 @@ MusicMaker.parseAndLoadSong = function(content) {
                 const fullPitchName = pitchName + octave;
 
                 if(!size || !instrumentName || !fullPitchName) {
-                    console.error('Failed to parse note:', part);
                     return;
                 }
 

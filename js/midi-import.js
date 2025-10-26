@@ -37,7 +37,6 @@ MusicMaker.MidiImport = (function() {
                     processMidiData(midiData, beforeState);
                 } catch (error) {
                     alert('Failed to parse MIDI file. The file may be corrupt or in an unsupported format.');
-                    console.error('MIDI parsing error:', error);
                 }
             };
             reader.readAsArrayBuffer(file);

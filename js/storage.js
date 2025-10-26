@@ -16,7 +16,6 @@ MusicMaker.Storage = (function() {
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (e) {
-            console.error("Error saving state to localStorage", e);
         }
     }
 
@@ -28,7 +27,6 @@ MusicMaker.Storage = (function() {
             }
             return JSON.parse(savedState);
         } catch (e) {
-            console.error("Error loading state from localStorage", e);
             return null;
         }
     }
@@ -37,7 +35,6 @@ MusicMaker.Storage = (function() {
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch (e) {
-            console.error("Error clearing state from localStorage", e);
         }
     }
 

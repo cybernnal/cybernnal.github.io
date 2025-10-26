@@ -27,7 +27,6 @@ class Playback {
         this.gainNode.connect(this.compressor);
         this.compressor.connect(this.audioContext.destination);
 
-        console.log('Playback constructor called');
         this.loadSound('sound.ogg').then(buffer => this.soundBuffer = buffer);
         this.loadAllInstrumentSounds();
     }
@@ -38,14 +37,11 @@ class Playback {
 
     async loadSound(url) {
         try {
-            console.log('Loading sound from:', url);
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
             const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-            console.log('Sound loaded successfully:', audioBuffer);
             return audioBuffer;
         } catch (error) {
-            console.error('Error loading sound:', error);
         }
     }
 
@@ -61,7 +57,6 @@ class Playback {
                 }
             }
         } catch (error) {
-            console.error('Error loading instrument sounds:', error);
         }
     }
 
@@ -75,7 +70,6 @@ class Playback {
 
         const baseMidiFsharp0 = 18;
         const midi = baseMidiFsharp0 + octave * 12 + noteOffsetMap[key];
-        console.log(`noteToMidi: noteName=${noteName}, key=${key}, octave=${octave}, midi=${midi}`);
         return midi;
     }
 
@@ -93,21 +87,17 @@ class Playback {
 
         const semitoneDifference = targetMidi - baseMidi;
         const playbackRate = Math.pow(2, semitoneDifference / 12);
-        console.log(`Note: ${note.pitch}, Target MIDI: ${targetMidi}, Base MIDI: ${baseMidi}, Playback Rate: ${playbackRate}`);
         return playbackRate;
     }
 
     play() {
-        console.log('Play called');
         if (this.isPlaying) {
             return;
         }
         this.isPlaying = true;
         if (this.audioContext.state === 'suspended') {
             this.audioContext.resume();
-            console.log('AudioContext resumed');
         }
-        console.log('AudioContext state:', this.audioContext.state);
         this.startTime = this.audioContext.currentTime - this.playbackPosition;
 
         this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
@@ -126,7 +116,6 @@ class Playback {
             }
 
             if (!buffer) {
-                console.warn(`No buffer for instrument ${instrumentName} and size ${noteSize}`);
                 return;
             }
 
@@ -154,7 +143,6 @@ class Playback {
     }
 
     pause() {
-        console.log('Pause called');
         if (!this.isPlaying) return;
         this.isPlaying = false;
         this.playingSources.forEach(source => source.stop());
