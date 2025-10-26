@@ -5,3 +5,6 @@
 [submodule "vendor/midi-parser-js"]
 	path = vendor/midi-parser-js
 	url = https://github.com/colxi/midi-parser-js
+[submodule "vendor/CreateWhistle"]
+	path = vendor/CreateWhistle
+	url = https://github.com/Creators-of-Create/Create
