@@ -344,11 +344,18 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
     const key = document.createElement('div');
     const isBlackKey = fullPitchName.includes('#');
     key.className = `key ${isBlackKey ? 'key--black' : 'key--white'} ${isPercussion ? 'key--percussion' : ''}`;
+
+    const keyContentWrapper = document.createElement('div');
+    keyContentWrapper.className = 'key-content-wrapper';
+
+    const pitchNameSpan = document.createElement('span');
+    pitchNameSpan.className = 'pitch-name';
     if (isPercussion) {
-        key.textContent = `Perc ${percIndex + 1}`;
+        pitchNameSpan.textContent = `Perc ${percIndex + 1}`;
     } else {
-        key.textContent = fullPitchName;
+        pitchNameSpan.textContent = fullPitchName;
     }
+    keyContentWrapper.appendChild(pitchNameSpan);
 
     const trackControls = document.createElement('div');
     trackControls.className = 'track-controls';
@@ -393,6 +400,15 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
                 expandBtn.style.visibility = 'visible';
             };
             trackControls.appendChild(addBtn);
+
+            const duplicateBtn = document.createElement('button');
+            duplicateBtn.className = 'duplicate-btn';
+            duplicateBtn.innerHTML = '&#128203;'; // Unicode for clipboard icon
+            duplicateBtn.onclick = (e) => {
+                e.stopPropagation();
+                MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, size, trHeader);
+            };
+            trackControls.appendChild(duplicateBtn);
         }
 
     } else { // Child track
@@ -422,9 +438,20 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
             }
         };
         trackControls.appendChild(deleteBtn);
+
+        const duplicateBtn = document.createElement('button');
+        duplicateBtn.className = 'duplicate-btn';
+        duplicateBtn.innerHTML = '&#128203;'; // Unicode for clipboard icon
+        duplicateBtn.onclick = (e) => {
+            e.stopPropagation();
+            const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
+            MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, size, parentHeader);
+        };
+        trackControls.appendChild(duplicateBtn);
     }
 
-    key.appendChild(trackControls);
+    keyContentWrapper.appendChild(trackControls);
+    key.appendChild(keyContentWrapper);
     tdHeader.appendChild(key);
     trHeader.appendChild(tdHeader);
 
@@ -1352,3 +1379,74 @@ MusicMaker.updateCursor = function(positionInSeconds) {
         cursor.style.left = (positionInBeats * stepWidth) + 'px';
     }
 }
+
+MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, size, parentHeader) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+
+    const title = document.createElement('h2');
+    title.textContent = `Duplicate Track for ${pitch}`;
+    modalContent.appendChild(title);
+
+    const instrumentSelector = document.createElement('select');
+    const existingInstruments = Array.from(document.querySelectorAll(`#track-headers-table tr[data-pitch="${pitch}"]`)).map(tr => tr.dataset.instrument);
+
+    for (const inst in MusicMaker.instruments) {
+        if (!existingInstruments.includes(inst)) {
+            const option = document.createElement('option');
+            option.value = inst;
+            option.textContent = inst.charAt(0).toUpperCase() + inst.slice(1);
+            instrumentSelector.appendChild(option);
+        }
+    }
+    modalContent.appendChild(instrumentSelector);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'modal-buttons';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.onclick = () => {
+        const selectedInstrument = instrumentSelector.value;
+        if (selectedInstrument) {
+            MusicMaker.duplicateTrack(pitch, instrumentName, size, selectedInstrument, parentHeader);
+            modal.remove();
+        }
+    };
+    buttonContainer.appendChild(confirmBtn);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => {
+        modal.remove();
+    };
+    buttonContainer.appendChild(cancelBtn);
+
+    modalContent.appendChild(buttonContainer);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+};
+
+MusicMaker.duplicateTrack = function(pitch, oldInstrumentName, size, newInstrumentName, parentHeader) {
+    const beforeState = MusicMaker.createSnapshot();
+
+    // Ensure parent is expanded to make the new track visible
+    if (parentHeader.classList.contains('collapsed')) {
+        parentHeader.querySelector('.expand-btn').click();
+    }
+
+    MusicMaker.addTrack(pitch, size, false, parentHeader, newInstrumentName, true, false);
+
+    const originalNotes = MusicMaker.notes.filter(n => n.pitch === pitch && n.instrumentName === oldInstrumentName);
+    originalNotes.forEach(note => {
+        const newNote = { ...note, id: Date.now() + Math.random(), instrumentName: newInstrumentName };
+        MusicMaker.notes.push(newNote);
+        MusicMaker.renderNote(newNote);
+    });
+
+    MusicMaker.commitChange(beforeState);
+};
