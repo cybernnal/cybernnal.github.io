@@ -59,5 +59,10 @@
     "medium": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_medium.ogg",
     "large": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_low.ogg",
     "huge": "vendor/SoundOfSteam/src/main/resources/assets/pipeorgans/sounds/vox_humana/vh_deep.ogg"
+  },
+  "steam whistle": {
+    "small": "vendor/CreateWhistle/src/main/resources/assets/create/sounds/whistle_high.ogg",
+    "medium": "vendor/CreateWhistle/src/main/resources/assets/create/sounds/whistle.ogg",
+    "large": "vendor/CreateWhistle/src/main/resources/assets/create/sounds/whistle_low.ogg"
   }
 }
