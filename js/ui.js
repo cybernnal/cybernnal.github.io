@@ -1364,7 +1364,7 @@ MusicMaker.updateCursor = function(positionInSeconds) {
     }
 }
 
-MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, size, parentHeader) {
+MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, parentHeader) {
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.style.display = 'flex';
@@ -1397,7 +1397,7 @@ MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, size, par
     confirmBtn.onclick = () => {
         const selectedInstrument = instrumentSelector.value;
         if (selectedInstrument) {
-            MusicMaker.duplicateTrack(pitch, instrumentName, size, selectedInstrument, parentHeader);
+            MusicMaker.duplicateTrack(pitch, instrumentName, selectedInstrument, parentHeader);
             modal.remove();
         }
     };
@@ -1415,7 +1415,7 @@ MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, size, par
     document.body.appendChild(modal);
 };
 
-MusicMaker.duplicateTrack = function(pitch, oldInstrumentName, size, newInstrumentName, parentHeader) {
+MusicMaker.duplicateTrack = function(pitch, oldInstrumentName, newInstrumentName, parentHeader) {
     const beforeState = MusicMaker.createSnapshot();
 
     // Ensure parent is expanded to make the new track visible
@@ -1423,7 +1423,7 @@ MusicMaker.duplicateTrack = function(pitch, oldInstrumentName, size, newInstrume
         parentHeader.querySelector('.expand-btn').click();
     }
 
-    MusicMaker.addTrack(pitch, size, false, parentHeader, newInstrumentName, true, false);
+    MusicMaker.addTrack(pitch, false, parentHeader, newInstrumentName, true, false);
 
     const originalNotes = MusicMaker.notes.filter(n => n.pitch === pitch && n.instrumentName === oldInstrumentName);
     originalNotes.forEach(note => {
