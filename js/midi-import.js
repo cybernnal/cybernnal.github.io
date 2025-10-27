@@ -311,11 +311,11 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                                const APP_MIN_PITCH = 19;
+                                const APP_MIN_PITCH = 6; // F#-1
 
     
 
-                                const APP_MAX_PITCH = 78;
+                                const APP_MAX_PITCH = 109; // C#8
 
     
 
@@ -335,7 +335,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    This MIDI has notes from ${midiPitchToNoteName(minPitch)} (pitch ${minPitch}) to ${midiPitchToNoteName(maxPitch)} (pitch ${maxPitch}). <br><br> 
+                    This MIDI has notes from ${MusicMaker.midiToNoteName(minPitch)} (pitch ${minPitch}) to ${MusicMaker.midiToNoteName(maxPitch)} (pitch ${maxPitch}). <br><br> 
 
     
 
@@ -479,7 +479,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    let infoText = `The new range will be ${midiPitchToNoteName(newMin)} to ${midiPitchToNoteName(newMax)}.`;
+                    let infoText = `The new range will be ${MusicMaker.midiToNoteName(newMin)} to ${MusicMaker.midiToNoteName(newMax)}.`;
 
     
 
@@ -1143,62 +1143,6 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            function midiPitchToNoteName(pitch) {
-
-    
-
-                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-    
-
-                const octave = Math.floor(pitch / 12) - 1;
-
-    
-
-                const noteName = noteNames[pitch % 12];
-
-    
-
-                return noteName + octave;
-
-    
-
-            }
-
-    
-
-        
-
-    
-
-    function midiPitchToAppName(pitch) {
-        const fSharpOctavePitchNames = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
-        
-        const midiNoteToAppPitchIndex = {
-            0: 6, 1: 5, 2: 4, 3: 3, 4: 2, 5: 1, 6: 0, 7: 11, 8: 10, 9: 9, 10: 8, 11: 7
-        };
-
-        let octave;
-        if (pitch < 30) octave = 1;
-        else if (pitch < 42) octave = 2;
-        else if (pitch < 54) octave = 3;
-        else if (pitch < 66) octave = 4;
-        else if (pitch < 78) octave = 5;
-        else octave = 5;
-
-        const noteInOctave = pitch % 12;
-        const appPitchIndex = midiNoteToAppPitchIndex[noteInOctave];
-
-        if (appPitchIndex === undefined) {
-            return `Clipped: ${midiPitchToNoteName(pitch)}`;
-        }
-
-        const appPitchName = fSharpOctavePitchNames[appPitchIndex];
-        return appPitchName + octave;
-    }
-
-    
-
                         function transformAndLoad(notes, instrumentMap, beforeState) {
 
     
@@ -1220,14 +1164,6 @@ MusicMaker.MidiImport = (function() {
     
 
                     let songTotalTime = 0;
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1291,39 +1227,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
                                 notes.forEach(note => {
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1339,39 +1243,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                     if (!instrument) {
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1387,39 +1259,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
                                     }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1435,30 +1275,6 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                     let fullPitchName;
 
     
@@ -1467,57 +1283,9 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                     if (note.isClipped) {
-                                        fullPitchName = `Clipped: ${midiPitchToNoteName(note.pitch)}`;
+                                        fullPitchName = `Clipped: ${MusicMaker.midiToNoteName(note.pitch)}`;
                                     } else if (note.instrument === 'percussion') {
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1533,55 +1301,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                         fullPitchName = 'Percussion';
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1597,30 +1317,6 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                             midiTrackLayout[fullPitchName] = [];
 
     
@@ -1629,55 +1325,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                         }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1693,30 +1341,6 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                             midiTrackLayout[fullPitchName].push(pitchName);
 
     
@@ -1725,55 +1349,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                         }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1789,55 +1365,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                                        fullPitchName = midiPitchToAppName(note.pitch);
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
+                                        fullPitchName = MusicMaker.midiToNoteName(note.pitch);
 
     
 
@@ -1853,30 +1381,6 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                             midiTrackLayout[fullPitchName] = [];
 
     
@@ -1885,55 +1389,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                         }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -1949,55 +1405,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                             midiTrackLayout[fullPitchName].push(instrument.name);
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
 
     
 
@@ -2013,30 +1421,6 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
                                     }
 
     
@@ -2045,7 +1429,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
+                        const newNote = {
 
     
 
@@ -2053,7 +1437,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    
+                            id: Date.now() + Math.random(),
 
     
 
@@ -2061,7 +1445,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
+                            instrumentName: note.instrument === 'percussion' ? `Percussion ${note.pitch}` : instrument.name,
 
     
 
@@ -2069,7 +1453,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                                });
+                            pitch: fullPitchName,
 
     
 
@@ -2077,7 +1461,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
+                            start: note.start,
 
     
 
@@ -2085,7 +1469,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    
+                            duration: note.duration
 
     
 
@@ -2093,7 +1477,11 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            
+                        };
+
+    
+
+                                                newNotes.push(newNote);
 
     
 
@@ -2101,7 +1489,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                                const fullTrackLayout = {};
+                        const endTime = note.start + note.duration;
 
     
 
@@ -2109,7 +1497,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    const SIZES = ['tiny', 'small', 'medium', 'large', 'huge'];
+                        if (endTime > songTotalTime) {
 
     
 
@@ -2117,7 +1505,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    const OCTAVE_PITCH_NAMES = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
+                            songTotalTime = endTime;
 
     
 
@@ -2125,47 +1513,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                    SIZES.forEach((size, index) => {
-
-    
-
-        
-
-    
-
-                        const octaveNum = 5 - index;
-
-    
-
-        
-
-    
-
-                        OCTAVE_PITCH_NAMES.forEach(pitchName => {
-
-    
-
-        
-
-    
-
-                            const fullPitchName = pitchName + octaveNum;
-
-    
-
-        
-
-    
-
-                            fullTrackLayout[fullPitchName] = midiTrackLayout[fullPitchName] || [];
-
-    
-
-        
-
-    
-
-                        });
+                        }
 
     
 
@@ -2180,6 +1528,14 @@ MusicMaker.MidiImport = (function() {
         
 
     
+
+                    const fullTrackLayout = {};
+
+                    MusicMaker.ALL_PITCH_NAMES.forEach(pitchName => {
+
+                        fullTrackLayout[pitchName] = midiTrackLayout[pitchName] || [];
+
+                    });
 
             
 
@@ -2229,267 +1585,6 @@ MusicMaker.MidiImport = (function() {
                                 MusicMaker.createCustomInstrument(pitchName, exportName);
                             }
                         }
-                    });
-                    const octaveToSize = { 5: 'tiny', 4: 'small', 3: 'medium', 2: 'large', 1: 'huge' };
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                    notes.forEach(note => {
-
-    
-
-        
-
-    
-
-                        const instrument = instrumentMap[note.instrument];
-
-    
-
-        
-
-    
-
-                        if (!instrument) return;
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                        let pitchName, size, fullPitchName;
-
-    
-
-        
-
-    
-
-                        if (note.instrument === 'percussion') {
-
-    
-
-        
-
-    
-
-                            pitchName = `Percussion ${note.pitch}`;
-
-    
-
-        
-
-    
-
-                            size = 'medium';
-
-    
-
-        
-
-    
-
-                            fullPitchName = 'Percussion';
-
-    
-
-        
-
-    
-
-                        } else {
-
-    
-
-        
-
-    
-
-                            const appPitch = midiPitchToAppName(note.pitch);
-
-    
-
-        
-
-    
-
-                            const octave = parseInt(appPitch.slice(-1), 10);
-
-    
-
-        
-
-    
-
-                            pitchName = appPitch.slice(0, -1);
-
-    
-
-        
-
-    
-
-                            size = octaveToSize[octave] || 'medium';
-
-    
-
-        
-
-    
-
-                            fullPitchName = appPitch;
-
-    
-
-        
-
-    
-
-                        }
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                        const newNote = {
-
-    
-
-        
-
-    
-
-                            id: Date.now() + Math.random(),
-
-    
-
-        
-
-    
-
-                            size: size,
-
-    
-
-        
-
-    
-
-                            instrumentName: note.instrument === 'percussion' ? pitchName : instrument.name,
-
-    
-
-        
-
-    
-
-                            pitch: fullPitchName,
-
-    
-
-        
-
-    
-
-                            start: note.start,
-
-    
-
-        
-
-    
-
-                            duration: note.duration
-
-    
-
-        
-
-    
-
-                        };
-
-    
-
-                                                newNotes.push(newNote);
-
-    
-
-        
-
-    
-
-            
-
-    
-
-        
-
-    
-
-                        const endTime = note.start + note.duration;
-
-    
-
-        
-
-    
-
-                        if (endTime > songTotalTime) {
-
-    
-
-        
-
-    
-
-                            songTotalTime = endTime;
-
-    
-
-        
-
-    
-
-                        }
-
-    
-
-        
-
-    
-
                     });
 
     

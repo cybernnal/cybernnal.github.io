@@ -2,6 +2,13 @@ var MusicMaker = MusicMaker || {};
 
 MusicMaker.tracks = [];
 MusicMaker.notes = [];
+MusicMaker.ALL_PITCH_NAMES = [];
+const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+for (let midi = 109; midi >= 6; midi--) { // C#8 is 109, F#-1 is 6
+    const noteIndex = midi % 12;
+    const octave = Math.floor(midi / 12) - 1;
+    MusicMaker.ALL_PITCH_NAMES.push(noteNames[noteIndex] + octave);
+}
 
 let stepWidth = 50;
 let minNoteDuration = 1;
@@ -88,18 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// The 13 pitches that make up a single user-defined "octave"
-MusicMaker.OCTAVE_PITCH_NAMES = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
-const SIZES = ['tiny', 'small', 'medium', 'large', 'huge'];
-
-// Create a master list of all pitches from highest to lowest for continuous color gradient
-MusicMaker.ALL_PITCH_NAMES = [];
-for (let octaveNum = 5; octaveNum >= 1; octaveNum--) {
-    MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
-        MusicMaker.ALL_PITCH_NAMES.push(pitchName + octaveNum);
-    });
-}
-
 MusicMaker.instruments = {};
 
 MusicMaker.populateInstrumentSelector = function() {
@@ -183,39 +178,42 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
                 const instruments = trackLayout[fullPitchName];
                 if (instruments.length > 0) {
                     const parentInstrument = instruments[0]; // The first instrument is the parent
-                    const octaveNum = parseInt(fullPitchName.slice(-1));
-                    const size = SIZES[5 - octaveNum];
                     const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
-                    MusicMaker.addTrack(fullPitchName, size, false, null, parentInstrument, false, isCollapsed);
+                    MusicMaker.addTrack(fullPitchName, false, null, parentInstrument, false, isCollapsed);
                     createdPitches.add(fullPitchName);
 
                     for (let i = 1; i < instruments.length; i++) {
                         const instrumentName = instruments[i];
                         const parentTrack = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
-                        MusicMaker.addTrack(fullPitchName, size, false, parentTrack, instrumentName, true);
+                        MusicMaker.addTrack(fullPitchName, false, parentTrack, instrumentName, true);
                     }
                 }
             }
         });
     }
 
-    // Create the default 5 octaves for any pitches not in the layout
-    SIZES.forEach((size, index) => {
-        const octaveNum = 5 - index; // 5 for tiny, 4 for small, etc.
-        MusicMaker.OCTAVE_PITCH_NAMES.forEach(pitchName => {
-            const fullPitchName = pitchName + octaveNum;
-            if (!createdPitches.has(fullPitchName)) {
-                const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
-                MusicMaker.addTrack(fullPitchName, size, false, null, 'diapason', false, isCollapsed);
+    // Create tracks for all pitches
+    MusicMaker.ALL_PITCH_NAMES.forEach(fullPitchName => {
+        if (!createdPitches.has(fullPitchName)) {
+            const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
+            // Find a default instrument that can play this pitch
+            const midi = MusicMaker.noteNameToMidi(fullPitchName);
+            let defaultInstrument = 'diapason';
+            for (const instName in MusicMaker.instrumentData.instruments) {
+                const inst = MusicMaker.instrumentData.instruments[instName];
+                if (midi >= inst.noteRange[0] && midi <= inst.noteRange[1]) {
+                    defaultInstrument = instName;
+                    break;
+                }
             }
-        });
+            MusicMaker.addTrack(fullPitchName, false, null, defaultInstrument, false, isCollapsed);
+        }
     });
-
 
     if (trackLayout && trackLayout['Percussion']) {
         const percussionInstruments = trackLayout['Percussion'];
         percussionInstruments.forEach((instrumentName, index) => {
-            MusicMaker.addTrack('Percussion', 'medium', false, null, instrumentName, false, true, index);
+            MusicMaker.addTrack('Percussion', false, null, instrumentName, false, true, index);
         });
     }
 
@@ -283,7 +281,7 @@ MusicMaker.createCustomInstrument = function(displayName, exportName) {
 
     MusicMaker.instruments[displayName] = {
         exportName: exportName,
-        sizes: ["tiny", "small", "medium", "large", "huge"],
+        noteRange: [0, 127], // Custom instruments can play all notes by default
         hue: randomHue,
         saturation: 70
     };
@@ -295,7 +293,7 @@ MusicMaker.createCustomInstrument = function(displayName, exportName) {
     selector.insertBefore(option, selector.lastChild);
 };
 
-MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, instrumentName = 'diapason', isChild = false, isCollapsed = true, percIndex = -1) {
+MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instrumentName = 'diapason', isChild = false, isCollapsed = true, percIndex = -1) {
     const headersTbody = document.querySelector('#track-headers-table tbody');
     const timelineTbody = document.querySelector('#timeline-table tbody');
 
@@ -396,7 +394,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
                 if (trHeader.classList.contains('collapsed')) {
                     expandBtn.click();
                 }
-                MusicMaker.addTrack(fullPitchName, size, true, trHeader, undefined, true, false);
+                MusicMaker.addTrack(fullPitchName, true, trHeader, undefined, true, false);
                 expandBtn.style.visibility = 'visible';
             };
             trackControls.appendChild(addBtn);
@@ -406,7 +404,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
             duplicateBtn.innerHTML = '&#128203;'; // Unicode for clipboard icon
             duplicateBtn.onclick = (e) => {
                 e.stopPropagation();
-                MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, size, trHeader);
+                MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, trHeader);
             };
             trackControls.appendChild(duplicateBtn);
         }
@@ -445,7 +443,7 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         duplicateBtn.onclick = (e) => {
             e.stopPropagation();
             const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
-            MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, size, parentHeader);
+            MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, parentHeader);
         };
         trackControls.appendChild(duplicateBtn);
     }
@@ -496,7 +494,6 @@ MusicMaker.addTrack = function(fullPitchName, size, isButton, container = null, 
         const newNote = {
             id: Date.now() + Math.random(),
             instrumentName: newInstrumentName,
-            size: size,
             pitch: fullPitchName,
             start: finalStart,
             duration: minNoteDuration
@@ -899,20 +896,8 @@ MusicMaker.getTrackLayout = function() {
 };
 
 MusicMaker.comparePitches = function(pitchA, pitchB) {
-    const octaveA = parseInt(pitchA.slice(-1));
-    const octaveB = parseInt(pitchB.slice(-1));
-
-    if (octaveA !== octaveB) {
-        return octaveA - octaveB; // Higher octave number is higher pitch
-    }
-
-    const nameA = pitchA.slice(0, -1);
-    const nameB = pitchB.slice(0, -1);
-
-    const indexA = MusicMaker.OCTAVE_PITCH_NAMES.indexOf(nameA);
-    const indexB = MusicMaker.OCTAVE_PITCH_NAMES.indexOf(nameB);
-
-    // Lower index in OCTAVE_PITCH_NAMES is higher pitch
+    const indexA = MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA);
+    const indexB = MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
     return indexB - indexA;
 };
 
@@ -1205,7 +1190,6 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
                 newNotes.push({
                     id: Date.now() + Math.random(),
                     instrumentName: ghostNote.currentTimeline.dataset.instrument,
-                    size: noteData.size,
                     pitch: ghostNote.currentTimeline.parentElement.parentElement.dataset.pitch,
                     start: newStart,
                     duration: noteData.duration

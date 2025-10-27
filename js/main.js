@@ -1,15 +1,6 @@
 let songTotalTime = 0;
 var MusicMaker = MusicMaker || {};
 
-MusicMaker.getNoteSize = function(note) {
-    const octave = parseInt(note.pitch.replace(/[^0-9]/g, ''), 10);
-    if (octave <= 1) return 'huge';
-    if (octave === 2) return 'large';
-    if (octave === 3) return 'medium';
-    if (octave === 4) return 'small';
-    return 'tiny';
-};
-
 const UNDO_LIMIT = 20;
 let undoStack = [];
 let redoStack = [];
@@ -101,15 +92,14 @@ MusicMaker.applyState = function(state) {
             const parentTrack = document.querySelector(`.parent-track[data-pitch="Percussion"]`);
             if (parentTrack) {
                 instruments.forEach(instrumentName => {
-                    MusicMaker.addTrack('Percussion', 'medium', false, parentTrack, instrumentName, true);
+                    MusicMaker.addTrack('Percussion', false, parentTrack, instrumentName, true);
                 });
             }
         } else {
             const parentTrack = document.querySelector(`.parent-track[data-pitch="${pitch}"]`);
             if (parentTrack) {
-                const size = parentTrack.dataset.size;
                 instruments.forEach(instrumentName => {
-                    MusicMaker.addTrack(pitch, size, false, parentTrack, instrumentName, true);
+                    MusicMaker.addTrack(pitch, false, parentTrack, instrumentName, true);
                 });
             }
         }
@@ -456,10 +446,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const noteId = noteElement.dataset.noteId;
             const note = MusicMaker.notes.find(n => String(n.id) === noteId);
             if (note) {
-                const noteSize = MusicMaker.getNoteSize(note);
+                const midi = MusicMaker.noteNameToMidi(note.pitch);
                 const instrumentData = MusicMaker.instrumentData.instruments[instrumentName];
-                if (instrumentData && !instrumentData.sizes.includes(noteSize)) {
-                    alert(`Instrument "${instrumentName}" does not support the size "${noteSize}" for the note "${note.pitch}".`);
+                if (instrumentData && (midi < instrumentData.noteRange[0] || midi > instrumentData.noteRange[1])) {
+                    alert(`Instrument "${instrumentName}" cannot play the note "${note.pitch}".`);
                     instrumentSelector.value = note.instrumentName; // Revert selector
                     return;
                 }
@@ -616,7 +606,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const clipboardData = selectedNoteData.map(note => ({
                     instrumentName: note.instrumentName,
-                    size: note.size,
                     start: note.start - baseNote.start, // Relative horizontal start
                     duration: note.duration,
                     trackOffset: note.trackIndex - baseNote.trackIndex // Relative vertical position
