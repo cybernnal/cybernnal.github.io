@@ -21,270 +21,1181 @@ MusicMaker.MidiImport = (function() {
         "Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet", "Telephone Ring", "Helicopter", "Applause", "Gunshot"
     ];
 
-    function importMidi(beforeState) {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.mid,audio/midi';
-        input.onchange = e => {
-            const file = e.target.files[0];
-            if (!file) return;
+        function importMidi(beforeState) {
 
-            const reader = new FileReader();
-            reader.onload = e => {
-                const arrayBuffer = e.target.result;
-                try {
-                    const midiData = MidiParser.parse(new Uint8Array(arrayBuffer));
-                    processMidiData(midiData, beforeState);
-                } catch (error) {
-                    alert('Failed to parse MIDI file. The file may be corrupt or in an unsupported format.');
-                }
+            const input = document.createElement('input');
+
+            input.type = 'file';
+
+            input.accept = '.mid,audio/midi';
+
+            input.onchange = e => {
+
+                const file = e.target.files[0];
+
+                if (!file) return;
+
+    
+
+                const fileInfo = {
+
+                    name: file.name,
+
+                    size: file.size,
+
+                    lastModified: new Date(file.lastModified).toLocaleString()
+
+                };
+
+    
+
+                const reader = new FileReader();
+
+                reader.onload = e => {
+
+                    const arrayBuffer = e.target.result;
+
+                    try {
+
+                        const midiData = MidiParser.parse(new Uint8Array(arrayBuffer));
+
+                        processMidiData(midiData, fileInfo, beforeState);
+
+                    } catch (error) {
+
+                        alert('Failed to parse MIDI file. The file may be corrupt or in an unsupported format.');
+
+                    }
+
+                };
+
+                reader.readAsArrayBuffer(file);
+
             };
-            reader.readAsArrayBuffer(file);
-        };
-        input.click();
-    }
 
-    function processMidiData(midiData, beforeState) {
-        const timeDivision = midiData.timeDivision;
-        let tempo = 120;
-        if (midiData.track.length > 0) {
-            const tempoEvent = midiData.track[0].event.find(e => e.type === 0x51);
-            if (tempoEvent) {
-                tempo = 60000000 / tempoEvent.data;
-            }
+            input.click();
+
         }
-        const scalingFactor = 10 / timeDivision;
 
-        const notes = [];
-        const instruments = new Map();
-        const channelInstruments = {};
+    
 
-        midiData.track.forEach((track, trackIndex) => {
-            let currentTime = 0;
-            const activeNotes = {};
+        function processMidiData(midiData, fileInfo, beforeState) {
 
-            track.event.forEach(event => {
-                currentTime += event.deltaTime;
+            const timeDivision = midiData.timeDivision;
 
-                switch (event.type) {
-                    case 0xC: // Program Change
-                        if (event.channel !== 9) { // Not percussion channel
-                            const instrumentId = event.data;
-                            const instrumentName = MIDI_INSTRUMENT_NAMES[instrumentId] || `Instrument ${instrumentId}`;
-                            if (!instruments.has(instrumentId)) {
-                                instruments.set(instrumentId, { name: instrumentName, id: instrumentId });
+            let tempo = 120;
+
+            if (midiData.track.length > 0) {
+
+                const tempoEvent = midiData.track[0].event.find(e => e.type === 0x51);
+
+                if (tempoEvent) {
+
+                    tempo = 60000000 / tempoEvent.data;
+
+                }
+
+            }
+
+            const scalingFactor = 10 / timeDivision;
+
+    
+
+            const notes = [];
+
+            const instruments = new Map();
+
+            const channelInstruments = {};
+
+    
+
+            let minPitch = Infinity;
+
+            let maxPitch = -Infinity;
+
+            const pitches = new Set();
+
+    
+
+            midiData.track.forEach((track, trackIndex) => {
+
+                let currentTime = 0;
+
+                const activeNotes = {};
+
+    
+
+                track.event.forEach(event => {
+
+                    currentTime += event.deltaTime;
+
+    
+
+                    switch (event.type) {
+
+                        case 0xC: // Program Change
+
+                            if (event.channel !== 9) { // Not percussion channel
+
+                                const instrumentId = event.data;
+
+                                const instrumentName = MIDI_INSTRUMENT_NAMES[instrumentId] || `Instrument ${instrumentId}`;
+
+                                if (!instruments.has(instrumentId)) {
+
+                                    instruments.set(instrumentId, { name: instrumentName, id: instrumentId });
+
+                                }
+
+                                channelInstruments[event.channel] = instrumentId;
+
                             }
-                            channelInstruments[event.channel] = instrumentId;
-                        }
-                        break;
 
-                    case 0x9: // Note On
-                        if (event.data[1] > 0) { // Note On with velocity > 0
-                            activeNotes[event.data[0]] = {
-                                start: currentTime,
-                                channel: event.channel,
-                                velocity: event.data[1]
-                            };
-                        } else { // Note On with velocity 0 is a Note Off
+                            break;
+
+    
+
+                        case 0x9: // Note On
+
+                            if (event.data[1] > 0) { // Note On with velocity > 0
+
+                                const pitch = event.data[0];
+
+                                pitches.add(pitch);
+
+                                if (pitch < minPitch) minPitch = pitch;
+
+                                if (pitch > maxPitch) {
+
+                                    maxPitch = pitch;
+
+                                }
+
+                                activeNotes[pitch] = {
+
+                                    start: currentTime,
+
+                                    channel: event.channel,
+
+                                    velocity: event.data[1]
+
+                                };
+
+                            } else { // Note On with velocity 0 is a Note Off
+
+                                const noteNumber = event.data[0];
+
+                                if (activeNotes[noteNumber]) {
+
+                                    const start = activeNotes[noteNumber].start;
+
+                                    const duration = currentTime - start;
+
+                                    const channel = activeNotes[noteNumber].channel;
+
+    
+
+                                    if (duration > 0) {
+
+                                        notes.push({
+
+                                            pitch: noteNumber,
+
+                                            start: start * scalingFactor,
+
+                                            duration: duration * scalingFactor,
+
+                                            instrument: channel === 9 ? 'percussion' : channelInstruments[channel],
+
+                                            channel: channel
+
+                                        });
+
+                                    }
+
+                                    delete activeNotes[noteNumber];
+
+                                }
+
+                            }
+
+                            break;
+
+    
+
+                        case 0x8: // Note Off
+
                             const noteNumber = event.data[0];
+
                             if (activeNotes[noteNumber]) {
+
                                 const start = activeNotes[noteNumber].start;
+
                                 const duration = currentTime - start;
+
                                 const channel = activeNotes[noteNumber].channel;
 
+    
+
                                 if (duration > 0) {
+
                                     notes.push({
+
                                         pitch: noteNumber,
+
                                         start: start * scalingFactor,
+
                                         duration: duration * scalingFactor,
+
                                         instrument: channel === 9 ? 'percussion' : channelInstruments[channel],
+
                                         channel: channel
+
                                     });
+
                                 }
+
                                 delete activeNotes[noteNumber];
-                            }
-                        }
-                        break;
 
-                    case 0x8: // Note Off
-                        const noteNumber = event.data[0];
-                        if (activeNotes[noteNumber]) {
-                            const start = activeNotes[noteNumber].start;
-                            const duration = currentTime - start;
-                            const channel = activeNotes[noteNumber].channel;
-
-                            if (duration > 0) {
-                                notes.push({
-                                    pitch: noteNumber,
-                                    start: start * scalingFactor,
-                                    duration: duration * scalingFactor,
-                                    instrument: channel === 9 ? 'percussion' : channelInstruments[channel],
-                                    channel: channel
-                                });
                             }
-                            delete activeNotes[noteNumber];
-                        }
-                        break;
-                }
+
+                            break;
+
+                    }
+
+                });
+
             });
-        });
 
-        if (notes.some(n => n.instrument === 'percussion')) {
-            instruments.set('percussion', { name: 'Percussion', id: 'percussion' });
+    
+
+            if (notes.some(n => n.instrument === 'percussion')) {
+
+                instruments.set('percussion', { name: 'Percussion', id: 'percussion' });
+
+            }
+
+    
+
+            showTranspositionModal(notes, instruments, minPitch, maxPitch, pitches, fileInfo, beforeState);
+
         }
 
-        showInstrumentModal(Array.from(instruments.values()), notes, beforeState);
-    }
+    
+
+            function showTranspositionModal(notes, instruments, minPitch, maxPitch, pitches, fileInfo, beforeState) {
+
+    
+
+                const modal = document.getElementById('midi-transposition-modal');
+
+    
+
+                const analysisEl = document.getElementById('transposition-analysis');
+
+    
+
+                const semitonesInput = document.getElementById('transpose-semitones');
+
+    
+
+                const infoEl = document.getElementById('transposition-info');
+
+    
+
+                                const confirmBtn = document.getElementById('confirm-transposition');
+
+    
+
+                
+
+    
+
+                                const APP_MIN_PITCH = 19;
+
+    
+
+                                const APP_MAX_PITCH = 78;
+
+    
+
+                const APP_RANGE = APP_MAX_PITCH - APP_MIN_PITCH;
+
+    
 
         
 
-        function showInstrumentModal(instruments, notes, beforeState) {
-            const modal = document.getElementById('midi-instrument-modal');
-            const instrumentList = document.getElementById('midi-instrument-list');
-            const confirmBtn = document.getElementById('confirm-midi-instruments');
     
-            const instrumentChunks = [];
-            for (let i = 0; i < instruments.length; i += 5) {
-                instrumentChunks.push(instruments.slice(i, i + 5));
-            }
+
+                const sortedPitches = [...pitches].sort((a, b) => a - b);
+
     
-            let currentChunkIndex = 0;
-            const instrumentMap = {};
+
+                analysisEl.innerHTML = `
+
     
-            function renderChunk() {
-                instrumentList.innerHTML = '';
-                const chunk = instrumentChunks[currentChunkIndex];
-                chunk.forEach(inst => {
-                    const div = document.createElement('div');
-                    div.className = 'midi-instrument-item';
+
+                    This MIDI has notes from ${midiPitchToNoteName(minPitch)} (pitch ${minPitch}) to ${midiPitchToNoteName(maxPitch)} (pitch ${maxPitch}). <br><br> 
+
     
-                    const nameInput = document.createElement('input');
-                    nameInput.type = 'text';
-                    nameInput.value = inst.name;
-                    nameInput.dataset.instrumentId = inst.id;
+
+                    Unique pitches found (${sortedPitches.length}): ${sortedPitches.join(', ')}
+
     
-                    const abbrInput = document.createElement('input');
-abbrInput.type = 'text';
-abbrInput.value = inst.name.substring(0, 3).toLowerCase();
-abbrInput.dataset.instrumentId = inst.id;
 
-const select = document.createElement('select');
-const defaultOption = document.createElement('option');
-defaultOption.value = '';
-defaultOption.textContent = 'Select existing';
-select.appendChild(defaultOption);
+                `;
 
-for (const instrumentName in MusicMaker.instruments) {
-    const option = document.createElement('option');
-    option.value = instrumentName;
-    option.textContent = instrumentName;
-    select.appendChild(option);
-}
-
-// Check if an instrument with the same name already exists
-if (MusicMaker.instruments[inst.name]) {
-    select.value = inst.name;
-    abbrInput.value = MusicMaker.instruments[inst.name].exportName || inst.name.substring(0, 3).toLowerCase();
-}
-
-select.onchange = () => {
-    const selected = select.value;
-    if (selected) {
-        nameInput.value = selected;
-        abbrInput.value = MusicMaker.instruments[selected].exportName || selected.substring(0, 3).toLowerCase();
-    }
-};
     
-                    div.appendChild(nameInput);
-                    div.appendChild(abbrInput);
-                    div.appendChild(select);
-                    instrumentList.appendChild(div);
-                });
-                modal.style.display = 'flex';
-            }
+
+        
+
     
-            confirmBtn.onclick = () => {
-    const chunk = instrumentChunks[currentChunkIndex];
-    const nameInputs = Array.from(instrumentList.querySelectorAll('input[type="text"][data-instrument-id]')).filter((v, i) => i % 2 === 0);
-    const abbrInputs = Array.from(instrumentList.querySelectorAll('input[type="text"][data-instrument-id]')).filter((v, i) => i % 2 !== 0);
 
-    const existingInstruments = MusicMaker.instruments;
-    const newInstrumentData = new Map();
+                const midiRange = maxPitch - minPitch;
 
-    for (let i = 0; i < chunk.length; i++) {
-        const name = nameInputs[i].value.trim();
-        const abbr = abbrInputs[i].value.trim();
-        const instId = chunk[i].id;
+    
 
-        const existingInst = existingInstruments[name];
-        if (existingInst) {
-            if (existingInst.exportName !== abbr) {
-                alert(`Instrument '${name}' already exists with a different abbreviation ('${existingInst.exportName}'). Please use the existing abbreviation or choose a different name.`);
-                return;
-            }
+                let bestFit = 0;
+
+    
+
+                if (midiRange > APP_RANGE) {
+
+    
+
+                    // Center the MIDI range in the app range
+
+    
+
+                    const midiCenter = (minPitch + maxPitch) / 2;
+
+    
+
+                    const appCenter = (APP_MIN_PITCH + APP_MAX_PITCH) / 2;
+
+    
+
+                    bestFit = Math.round(appCenter - midiCenter);
+
+    
+
+                } else {
+
+    
+
+                    // Fit the whole MIDI range in the app range
+
+    
+
+                    if (minPitch < APP_MIN_PITCH) {
+
+    
+
+                        bestFit = APP_MIN_PITCH - minPitch;
+
+    
+
+                    } else if (maxPitch > APP_MAX_PITCH) {
+
+    
+
+                        bestFit = APP_MAX_PITCH - maxPitch;
+
+    
+
+                    }
+
+    
+
+                }
+
+    
+
+        
+
+    
+
+                semitonesInput.value = bestFit;
+
+    
+
+        
+
+    
+
+                function updateInfo() {
+
+    
+
+                    const transposeBy = parseInt(semitonesInput.value, 10) || 0;
+
+    
+
+                    const newMin = minPitch + transposeBy;
+
+    
+
+                    const newMax = maxPitch + transposeBy;
+
+    
+
+        
+
+    
+
+                    let clippedLow = 0;
+
+    
+
+                    let clippedHigh = 0;
+
+    
+
+        
+
+    
+
+                    notes.forEach(note => {
+
+    
+
+                        const newPitch = note.pitch + transposeBy;
+
+    
+
+                        if (newPitch < APP_MIN_PITCH) clippedLow++;
+
+    
+
+                        if (newPitch > APP_MAX_PITCH) clippedHigh++;
+
+    
+
+                    });
+
+    
+
+        
+
+    
+
+                    let infoText = `The new range will be ${midiPitchToNoteName(newMin)} to ${midiPitchToNoteName(newMax)}.`;
+
+    
+
+                    if (clippedLow > 0 || clippedHigh > 0) {
+
+    
+
+                        infoText += ` Warning: ${clippedLow} notes will be below the playable range and ${clippedHigh} notes will be above.`;
+
+    
+
+                    }
+
+    
+
+                    infoEl.textContent = infoText;
+
+    
+
+                }
+
+    
+
+        
+
+    
+
+                updateInfo();
+
+    
+
+        
+
+    
+
+                semitonesInput.oninput = updateInfo;
+
+    
+
+        
+
+    
+
+                confirmBtn.onclick = () => {
+
+    
+
+                    const transposeBy = parseInt(semitonesInput.value, 10) || 0;
+
+    
+
+                    const playableNotes = [];
+
+    
+
+                    const clippedNotes = [];
+
+    
+
+        
+
+    
+
+                    notes.forEach(note => {
+
+    
+
+                        const newPitch = note.pitch + transposeBy;
+
+    
+
+                        const newNote = { ...note, pitch: newPitch };
+
+    
+
+                        if (newPitch < APP_MIN_PITCH || newPitch > APP_MAX_PITCH) {
+
+    
+
+                            newNote.isClipped = true;
+
+    
+
+                            clippedNotes.push(newNote);
+
+    
+
+                        } else {
+
+    
+
+                            playableNotes.push(newNote);
+
+    
+
+                        }
+
+    
+
+                    });
+
+    
+
+        
+
+    
+
+                                            modal.style.display = 'none';
+
+    
+
+        
+
+    
+
+                                
+
+    
+
+        
+
+    
+
+                                            if (clippedNotes.length > 0) {
+
+    
+
+        
+
+    
+
+                                                const confirmed = confirm(`${clippedNotes.length} notes are outside the playable range. You can use an external editor to fix the file first.\n\nClick 'OK' to clip the notes and continue, or 'Cancel' to stop the import.`);
+
+    
+
+        
+
+    
+
+                                                if (confirmed) {
+
+    
+
+        
+
+    
+
+                                                    showInstrumentModal(Array.from(instruments.values()), playableNotes, beforeState);
+
+    
+
+        
+
+    
+
+                                                }
+
+    
+
+        
+
+    
+
+                                            } else {
+
+    
+
+        
+
+    
+
+                                                showInstrumentModal(Array.from(instruments.values()), playableNotes, beforeState);
+
+    
+
+        
+
+    
+
+                                            }
+
+    
+
+        
+
+    
+
+                            };
+
+    
+
+        
+
+    
+
+                    
+
+    
+
+        
+
+    
+
+                            modal.style.display = 'flex';
+
+    
+
+        
+
+    
+
+                        }
+
+    
+
+        
+
+    
+
+            function showInstrumentModal(instruments, notes, beforeState) {
+
+    
+
+                    const modal = document.getElementById('midi-instrument-modal');
+
+    
+
+                    const instrumentList = document.getElementById('midi-instrument-list');
+
+    
+
+                    const confirmBtn = document.getElementById('confirm-midi-instruments');
+
+    
+
+            
+
+    
+
+                    const instrumentChunks = [];
+
+    
+
+                    for (let i = 0; i < instruments.length; i += 5) {
+
+    
+
+                        instrumentChunks.push(instruments.slice(i, i + 5));
+
+    
+
+                    }
+
+    
+
+            
+
+    
+
+                    let currentChunkIndex = 0;
+
+    
+
+                    const instrumentMap = {};
+
+    
+
+            
+
+    
+
+                    function renderChunk() {
+
+    
+
+                        instrumentList.innerHTML = '';
+
+    
+
+                        const chunk = instrumentChunks[currentChunkIndex];
+
+    
+
+                        chunk.forEach(inst => {
+
+    
+
+                            const div = document.createElement('div');
+
+    
+
+                            div.className = 'midi-instrument-item';
+
+    
+
+            
+
+    
+
+                            const nameInput = document.createElement('input');
+
+    
+
+                            nameInput.type = 'text';
+
+    
+
+                            nameInput.value = inst.name;
+
+    
+
+                            nameInput.dataset.instrumentId = inst.id;
+
+    
+
+            
+
+    
+
+                            const abbrInput = document.createElement('input');
+
+    
+
+        abbrInput.type = 'text';
+
+    
+
+        abbrInput.value = inst.name.substring(0, 3).toLowerCase();
+
+    
+
+        abbrInput.dataset.instrumentId = inst.id;
+
+    
+
+        
+
+    
+
+        const select = document.createElement('select');
+
+    
+
+        const defaultOption = document.createElement('option');
+
+    
+
+        defaultOption.value = '';
+
+    
+
+        defaultOption.textContent = 'Select existing';
+
+    
+
+        select.appendChild(defaultOption);
+
+    
+
+        
+
+    
+
+        for (const instrumentName in MusicMaker.instruments) {
+
+    
+
+            const option = document.createElement('option');
+
+    
+
+            option.value = instrumentName;
+
+    
+
+            option.textContent = instrumentName;
+
+    
+
+            select.appendChild(option);
+
+    
+
         }
-        newInstrumentData.set(instId, { name, abbreviation: abbr });
-    }
 
-    for (const [instId, data] of newInstrumentData.entries()) {
-        instrumentMap[instId] = data;
-    }
-
-    currentChunkIndex++;
-    if (currentChunkIndex < instrumentChunks.length) {
-        renderChunk();
-    } else {
-        modal.style.display = 'none';
-        transformAndLoad(notes, instrumentMap, beforeState);
-    }
-};
     
-            if (instrumentChunks.length > 0) {
+
+        
+
+    
+
+        // Check if an instrument with the same name already exists
+
+    
+
+        if (MusicMaker.instruments[inst.name]) {
+
+    
+
+            select.value = inst.name;
+
+    
+
+            abbrInput.value = MusicMaker.instruments[inst.name].exportName || inst.name.substring(0, 3).toLowerCase();
+
+    
+
+        }
+
+    
+
+        
+
+    
+
+        select.onchange = () => {
+
+    
+
+            const selected = select.value;
+
+    
+
+            if (selected) {
+
+    
+
+                nameInput.value = selected;
+
+    
+
+                abbrInput.value = MusicMaker.instruments[selected].exportName || selected.substring(0, 3).toLowerCase();
+
+    
+
+            }
+
+    
+
+        };
+
+    
+
+            
+
+    
+
+                            div.appendChild(nameInput);
+
+    
+
+                            div.appendChild(abbrInput);
+
+    
+
+                            div.appendChild(select);
+
+    
+
+                            instrumentList.appendChild(div);
+
+    
+
+                        });
+
+    
+
+                        modal.style.display = 'flex';
+
+    
+
+                    }
+
+    
+
+            
+
+    
+
+                    confirmBtn.onclick = () => {
+
+    
+
+            const chunk = instrumentChunks[currentChunkIndex];
+
+    
+
+            const nameInputs = Array.from(instrumentList.querySelectorAll('input[type="text"][data-instrument-id]')).filter((v, i) => i % 2 === 0);
+
+    
+
+            const abbrInputs = Array.from(instrumentList.querySelectorAll('input[type="text"][data-instrument-id]')).filter((v, i) => i % 2 !== 0);
+
+    
+
+        
+
+    
+
+            const existingInstruments = MusicMaker.instruments;
+
+    
+
+            const newInstrumentData = new Map();
+
+    
+
+        
+
+    
+
+            for (let i = 0; i < chunk.length; i++) {
+
+    
+
+                const name = nameInputs[i].value.trim();
+
+    
+
+                const abbr = abbrInputs[i].value.trim();
+
+    
+
+                const instId = chunk[i].id;
+
+    
+
+        
+
+    
+
+                const existingInst = existingInstruments[name];
+
+    
+
+                if (existingInst) {
+
+    
+
+                    if (existingInst.exportName !== abbr) {
+
+    
+
+                        alert(`Instrument '${name}' already exists with a different abbreviation ('${existingInst.exportName}'). Please use the existing abbreviation or choose a different name.`);
+
+    
+
+                        return;
+
+    
+
+                    }
+
+    
+
+                }
+
+    
+
+                newInstrumentData.set(instId, { name, abbreviation: abbr });
+
+    
+
+            }
+
+    
+
+        
+
+    
+
+            for (const [instId, data] of newInstrumentData.entries()) {
+
+    
+
+                instrumentMap[instId] = data;
+
+    
+
+            }
+
+    
+
+        
+
+    
+
+            currentChunkIndex++;
+
+    
+
+            if (currentChunkIndex < instrumentChunks.length) {
+
+    
+
                 renderChunk();
+
+    
+
             } else {
-                transformAndLoad(notes, {}, beforeState);
+
+    
+
+                modal.style.display = 'none';
+
+    
+
+                transformAndLoad(notes, instrumentMap, beforeState);
+
+    
+
             }
+
+    
+
+        };
+
+    
+
+            
+
+    
+
+                    if (instrumentChunks.length > 0) {
+
+    
+
+                        renderChunk();
+
+    
+
+                    } else {
+
+    
+
+                        transformAndLoad(notes, {}, beforeState);
+
+    
+
+                    }
+
+    
+
+                }
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                
+
+    
+
+            function midiPitchToNoteName(pitch) {
+
+    
+
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    
+
+                const octave = Math.floor(pitch / 12) - 1;
+
+    
+
+                const noteName = noteNames[pitch % 12];
+
+    
+
+                return noteName + octave;
+
+    
+
+            }
+
+    
+
+        
+
+    
+
+    function midiPitchToAppName(pitch) {
+        const fSharpOctavePitchNames = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
+        
+        const midiNoteToAppPitchIndex = {
+            0: 6, 1: 5, 2: 4, 3: 3, 4: 2, 5: 1, 6: 0, 7: 11, 8: 10, 9: 9, 10: 8, 11: 7
+        };
+
+        let octave;
+        if (pitch < 30) octave = 1;
+        else if (pitch < 42) octave = 2;
+        else if (pitch < 54) octave = 3;
+        else if (pitch < 66) octave = 4;
+        else if (pitch < 78) octave = 5;
+        else octave = 5;
+
+        const noteInOctave = pitch % 12;
+        const appPitchIndex = midiNoteToAppPitchIndex[noteInOctave];
+
+        if (appPitchIndex === undefined) {
+            return `Clipped: ${midiPitchToNoteName(pitch)}`;
         }
 
-    
-
-        function midiPitchToAppName(pitch) {
-
-            const fSharpOctavePitchNames = ['F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A', 'G#', 'G', 'LF#'];
-
-            const midiNoteToAppPitchIndex = {
-
-                6: 0, 5: 1, 4: 2, 3: 3, 2: 4, 1: 5, 0: 6, 11: 7, 10: 8, 9: 9, 8: 10, 7: 11
-
-            };
-
-    
-
-            let octave;
-
-            if (pitch >= 66) octave = 5;
-
-            else if (pitch >= 54) octave = 4;
-
-            else if (pitch >= 42) octave = 3;
-
-            else if (pitch >= 30) octave = 2;
-
-            else octave = 1;
-
-    
-
-            const noteInOctave = pitch % 12;
-
-            const appPitchIndex = midiNoteToAppPitchIndex[noteInOctave];
-
-            const appPitchName = fSharpOctavePitchNames[appPitchIndex];
-
-    
-
-            return appPitchName + octave;
-
-        }
+        const appPitchName = fSharpOctavePitchNames[appPitchIndex];
+        return appPitchName + octave;
+    }
 
     
 
@@ -580,7 +1491,9 @@ select.onchange = () => {
 
     
 
-                                    if (note.instrument === 'percussion') {
+                                    if (note.isClipped) {
+                                        fullPitchName = `Clipped: ${midiPitchToNoteName(note.pitch)}`;
+                                    } else if (note.instrument === 'percussion') {
 
     
 

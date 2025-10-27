@@ -99,5 +99,23 @@
     </div>
 </div>
 
+<div id="midi-transposition-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h3>MIDI Note Range Issue</h3>
+        <p id="transposition-analysis"></p>
+        <p>You can transpose the song to better fit the application's 5-octave range.</p>
+        <div class="transpose-options">
+            <label>Transpose by: 
+                <input type="number" id="transpose-semitones" value="0" step="1">
+                 semitones
+            </label>
+        </div>
+        <p id="transposition-info"></p>
+        <button id="confirm-transposition">Continue</button>
+    </div>
+</div>
+
+
+
 </body>
 </html>
