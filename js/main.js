@@ -36,6 +36,17 @@ MusicMaker.updateCursorHeight = function() {
     }
 };
 
+MusicMaker.createCustomInstrument = function(displayName, exportName) {
+    if (!MusicMaker.state.instruments[displayName]) {
+        MusicMaker.state.instruments[displayName] = {
+            exportName: exportName,
+            isCustom: true
+        };
+        MusicMaker.populateInstrumentSelector();
+        MusicMaker.Storage.save(MusicMaker.state);
+    }
+};
+
 MusicMaker.setupEventListeners = function() {
     const mainContent = document.getElementById('main-content');
     let isPanning = false, startX, startY, scrollLeft, scrollTop;

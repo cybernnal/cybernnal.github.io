@@ -75,6 +75,10 @@ MusicMaker.parseAndLoadSong = function(content) {
     const parts = content.replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/).filter(p => p);
     const trackLayout = {};
 
+    const customInstrumentExportNames = Object.values(MusicMaker.state.instruments)
+        .filter(i => i.isCustom)
+        .map(i => i.exportName);
+
     parts.forEach(part => {
         if (!part) return;
 
@@ -89,7 +93,39 @@ MusicMaker.parseAndLoadSong = function(content) {
         if (noteInfo.toLowerCase() === 'x') {
             currentTime += duration;
         } else {
-            if (noteInfo.startsWith('undefined') || noteInfo.charAt(0) === 'p') {
+            let isCustom = false;
+            let customInstrumentExportName = null;
+            for (const name of customInstrumentExportNames) {
+                if (noteInfo.startsWith(name)) {
+                    isCustom = true;
+                    customInstrumentExportName = name;
+                    break;
+                }
+            }
+
+            if (isCustom) {
+                const pitchName = noteInfo.substring(customInstrumentExportName.length);
+                const instrumentName = exportNameToDisplayName[customInstrumentExportName];
+                
+                const fullPitchName = pitchName + '4'; // Assume octave 4
+
+                const newNote = {
+                    id: Date.now() + Math.random(),
+                    instrumentName: instrumentName,
+                    pitch: fullPitchName,
+                    start: currentTime,
+                    duration: duration
+                };
+                localTracks.push(newNote);
+                maxTime = Math.max(maxTime, currentTime + duration);
+
+                if (!trackLayout[fullPitchName]) {
+                    trackLayout[fullPitchName] = [];
+                }
+                if (!trackLayout[fullPitchName].includes(instrumentName)) {
+                    trackLayout[fullPitchName].push(instrumentName);
+                }
+            } else if (noteInfo.startsWith('undefined') || noteInfo.charAt(0) === 'p') {
                 let exportName;
                 if (noteInfo.startsWith('undefined')) {
                     exportName = noteInfo.substring('undefined'.length).replace('Percussio', '');
@@ -234,30 +270,30 @@ MusicMaker.exportTracks = function(songData) {
                     exportParts.push(`p${instrumentCode},${Number(note.duration.toFixed(2))}`);
                 }
             } else {
-                const size = MusicMaker.getNoteSize(note.pitch, note.instrumentName);
-                const sizeCode = sizeReverseMap[size];
-                
-                let instrumentCode = instrumentReverseMap[note.instrumentName];
-                if (!instrumentCode) {
-                    const customInstrument = MusicMaker.state.instruments[note.instrumentName];
-                    if (customInstrument) {
-                        instrumentCode = customInstrument.exportName;
-                    }
-                }
+                const customInstrument = MusicMaker.state.instruments[note.instrumentName];
+                const isCustom = customInstrument && customInstrument.isCustom;
 
-                if (instrumentCode && sizeCode) {
-                    const midi = MusicMaker.noteNameToMidi(note.pitch);
-                    const instrumentData = MusicMaker.instrumentData.instruments[note.instrumentName];
-                    if (instrumentData && instrumentData.sizeRanges) {
-                        const range = instrumentData.sizeRanges[size];
-                        if (range) {
-                            const pitchName = OCTAVE_PITCH_NAMES[range[1] - midi];
-                            exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                if (isCustom) {
+                    const instrumentCode = customInstrument.exportName;
+                    if (instrumentCode) {
+                        const pitchName = note.pitch.replace(/\d+$/, ''); // Remove octave
+                        exportParts.push(`${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                    }
+                } else {
+                    const size = MusicMaker.getNoteSize(note.pitch, note.instrumentName);
+                    const sizeCode = sizeReverseMap[size];
+                    const instrumentCode = instrumentReverseMap[note.instrumentName];
+
+                    if (instrumentCode && sizeCode) {
+                        const midi = MusicMaker.noteNameToMidi(note.pitch);
+                        const instrumentData = MusicMaker.instrumentData.instruments[note.instrumentName];
+                        if (instrumentData && instrumentData.sizeRanges) {
+                            const range = instrumentData.sizeRanges[size];
+                            if (range) {
+                                const pitchName = OCTAVE_PITCH_NAMES[range[1] - midi];
+                                exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                            }
                         }
-                    } else {
-                        // Handle custom instruments without sizeRanges
-                        const pitchName = OCTAVE_PITCH_NAMES[127 - midi];
-                        exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
                     }
                 }
             }
