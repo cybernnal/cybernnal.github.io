@@ -17,8 +17,8 @@ MusicMaker.importTracks = function(beforeState) {
 
             MusicMaker.createUI(trackPitches, songData.trackLayout);
 
-            MusicMaker.notes = songData.tracks;
-            songTotalTime = songData.totalTime;
+            MusicMaker.state.tracks = songData.tracks;
+            MusicMaker.state.songTotalTime = songData.totalTime;
 
             const bestTempo = MusicMaker.findBestTempo(songData.allDurations);
             MusicMaker.setTempo(bestTempo);
@@ -61,8 +61,8 @@ MusicMaker.parseAndLoadSong = function(content) {
     for (const code in instrumentMap) {
         exportNameToDisplayName[code] = instrumentMap[code];
     }
-    for (const displayName in MusicMaker.instruments) {
-        const instrument = MusicMaker.instruments[displayName];
+    for (const displayName in MusicMaker.state.instruments) {
+        const instrument = MusicMaker.state.instruments[displayName];
         if (instrument.exportName) {
             exportNameToDisplayName[instrument.exportName] = displayName;
         }
@@ -100,7 +100,7 @@ MusicMaker.parseAndLoadSong = function(content) {
                 let instrumentName = exportNameToDisplayName[exportName];
                 if (!instrumentName) {
                     instrumentName = exportName;
-                    if (!MusicMaker.instruments[instrumentName]) {
+                    if (!MusicMaker.state.instruments[instrumentName]) {
                         MusicMaker.createCustomInstrument(instrumentName, exportName);
                         exportNameToDisplayName[exportName] = instrumentName;
                     }
@@ -212,7 +212,7 @@ MusicMaker.exportTracks = function(songData) {
             if (note.pitch === 'Percussion') {
                 let instrumentCode = instrumentReverseMap[note.instrumentName];
                 if (!instrumentCode) {
-                    const customInstrument = MusicMaker.instruments[note.instrumentName];
+                    const customInstrument = MusicMaker.state.instruments[note.instrumentName];
                     if (customInstrument) {
                         instrumentCode = customInstrument.exportName;
                     }
@@ -226,7 +226,7 @@ MusicMaker.exportTracks = function(songData) {
                 
                 let instrumentCode = instrumentReverseMap[note.instrumentName];
                 if (!instrumentCode) {
-                    const customInstrument = MusicMaker.instruments[note.instrumentName];
+                    const customInstrument = MusicMaker.state.instruments[note.instrumentName];
                     if (customInstrument) {
                         instrumentCode = customInstrument.exportName;
                     }

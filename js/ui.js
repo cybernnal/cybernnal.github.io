@@ -1,7 +1,8 @@
 var MusicMaker = MusicMaker || {};
 
+MusicMaker.nextNoteId = 0;
+
 MusicMaker.tracks = [];
-MusicMaker.notes = [];
 MusicMaker.ALL_PITCH_NAMES = [];
 const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 for (let midi = 109; midi >= 6; midi--) { // C#8 is 109, F#-1 is 6
@@ -24,7 +25,6 @@ const uniqueSortedTempo3Durations = [...new Set(tempo3Durations)].sort((a, b) =>
 
 function snapToTempo3Grid(duration) {
     if (duration <= 0) return uniqueSortedTempo3Durations[0];
-    // find closest value in uniqueSortedTempo3Durations
     let closest = uniqueSortedTempo3Durations[0];
     let minDiff = Math.abs(duration - closest);
     for (const val of uniqueSortedTempo3Durations) {
@@ -51,16 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const oldTempo = playback.currentTempo;
                 if (oldTempo !== newTempo) {
                     const oldTimeUnit = 0.05 * oldTempo;
-                    // Avoid division by zero if oldTimeUnit is 0
                     const positionInBeats = oldTimeUnit > 0 ? playback.playbackPosition / oldTimeUnit : 0;
-
                     const newTimeUnit = 0.05 * newTempo;
                     playback.playbackPosition = positionInBeats * newTimeUnit;
-
-                    // Update the currentTempo on the playback object immediately
                     playback.currentTempo = newTempo;
-
-                    // Update the visual cursor position
                     MusicMaker.updateCursor(playback.playbackPosition);
                 }
             }
@@ -68,18 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
             MusicMaker.drawTimelineRuler();
 
             switch (newTempo) {
-                case 1:
-                    minNoteDuration = 1;
-                    break;
-                case 2:
-                    minNoteDuration = 0.5;
-                    break;
-                case 3:
-                    minNoteDuration = 0.33;
-                    break;
-                case 4:
-                    minNoteDuration = 0.25;
-                    break;
+                case 1: minNoteDuration = 1; break;
+                case 2: minNoteDuration = 0.5; break;
+                case 3: minNoteDuration = 0.33; break;
+                case 4: minNoteDuration = 0.25; break;
             }
         });
     }
@@ -95,18 +81,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-MusicMaker.instruments = {};
-
 MusicMaker.populateInstrumentSelector = function() {
     const selector = document.getElementById('instrument-selector');
-    selector.innerHTML = ''; // Clear existing options
+    selector.innerHTML = '';
 
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     defaultOption.textContent = 'Select Instrument';
     selector.appendChild(defaultOption);
 
-    for (const instrumentName in MusicMaker.instruments) {
+    for (const instrumentName in MusicMaker.state.instruments) {
         const option = document.createElement('option');
         option.value = instrumentName;
         option.textContent = instrumentName.charAt(0).toUpperCase() + instrumentName.slice(1);
@@ -122,7 +106,7 @@ MusicMaker.populateInstrumentSelector = function() {
 MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapseState = null) {
     MusicMaker.tracks = [];
     const appContainer = document.getElementById('app-container');
-    appContainer.innerHTML = ''; // Clear previous UI
+    appContainer.innerHTML = '';
 
     const mainContent = document.createElement('div');
     mainContent.id = 'main-content';
@@ -156,7 +140,7 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
 
     const playbackCursor = document.createElement('div');
     playbackCursor.id = 'playback-cursor';
-        timelineContainer.appendChild(playbackCursor);
+    timelineContainer.appendChild(playbackCursor);
 
     timelineTr.appendChild(timelineTh);
     timelineThead.appendChild(timelineTr);
@@ -171,13 +155,12 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
 
     const createdPitches = new Set();
 
-    // Add tracks from the trackPitches array
     if (trackPitches) {
         trackPitches.forEach(fullPitchName => {
             if (trackLayout.hasOwnProperty(fullPitchName) && fullPitchName !== 'Percussion') {
                 const instruments = trackLayout[fullPitchName];
                 if (instruments.length > 0) {
-                    const parentInstrument = instruments[0]; // The first instrument is the parent
+                    const parentInstrument = instruments[0];
                     const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
                     MusicMaker.addTrack(fullPitchName, false, null, parentInstrument, false, isCollapsed);
                     createdPitches.add(fullPitchName);
@@ -192,11 +175,9 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
         });
     }
 
-    // Create tracks for all pitches
     MusicMaker.ALL_PITCH_NAMES.forEach(fullPitchName => {
         if (!createdPitches.has(fullPitchName)) {
             const isCollapsed = collapseState ? collapseState[fullPitchName] !== false : true;
-            // Find a default instrument that can play this pitch
             const midi = MusicMaker.noteNameToMidi(fullPitchName);
             let defaultInstrument = 'diapason';
             for (const instName in MusicMaker.instrumentData.instruments) {
@@ -217,7 +198,6 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
         });
     }
 
-    // Restore collapse state
     if (collapseState) {
         const parentTracks = document.querySelectorAll('.parent-track');
         parentTracks.forEach(parent => {
@@ -240,7 +220,6 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
         });
     }
 
-    // Sort the tracks in the DOM
     setTimeout(() => {
         const headersTbody = document.querySelector('#track-headers-table tbody');
         const timelineTbody = document.querySelector('#timeline-table tbody');
@@ -250,20 +229,16 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
         const sortedHeaderRows = headerRows.sort((a, b) => {
             const pitchA = a.dataset.pitch;
             const pitchB = b.dataset.pitch;
-
             if (pitchA === 'Percussion') return 1;
             if (pitchB === 'Percussion') return -1;
-
             return MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA) - MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
         });
 
         const sortedTimelineRows = timelineRows.sort((a, b) => {
             const pitchA = a.dataset.pitch;
             const pitchB = b.dataset.pitch;
-
             if (pitchA === 'Percussion') return 1;
             if (pitchB === 'Percussion') return -1;
-
             return MusicMaker.ALL_PITCH_NAMES.indexOf(pitchA) - MusicMaker.ALL_PITCH_NAMES.indexOf(pitchB);
         });
 
@@ -273,15 +248,15 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
 };
 
 MusicMaker.createCustomInstrument = function(displayName, exportName) {
-    const usedHues = Object.values(MusicMaker.instruments).map(inst => inst.hue);
+    const usedHues = Object.values(MusicMaker.state.instruments).map(inst => inst.hue);
     let randomHue;
     do {
         randomHue = Math.floor(Math.random() * 360);
     } while (usedHues.includes(randomHue));
 
-    MusicMaker.instruments[displayName] = {
+    MusicMaker.state.instruments[displayName] = {
         exportName: exportName,
-        noteRange: [0, 127], // Custom instruments can play all notes by default
+        noteRange: [0, 127],
         hue: randomHue,
         saturation: 70
     };
@@ -301,7 +276,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
     if (isButton) {
         const existingInstrumentElements = Array.from(headersTbody.querySelectorAll(`tr[data-pitch="${fullPitchName}"]`));
         const usedInstruments = existingInstrumentElements.map(el => el.dataset.instrument);
-        const allInstruments = Object.keys(MusicMaker.instruments);
+        const allInstruments = Object.keys(MusicMaker.state.instruments);
         newInstrumentName = allInstruments.find(inst => !usedInstruments.includes(inst));
 
         if (!newInstrumentName) {
@@ -358,14 +333,14 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
     const trackControls = document.createElement('div');
     trackControls.className = 'track-controls';
 
-    if (!isChild || isPercussion) { // This is now a parent track OR a percussion track
+    if (!isChild || isPercussion) {
         if (isCollapsed && !isPercussion) {
             trHeader.classList.add('collapsed');
         }
         const expandBtn = document.createElement('button');
         expandBtn.className = 'expand-btn';
-        expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;'; // Right or down triangle
-        expandBtn.style.visibility = 'hidden'; // Initially hidden
+        expandBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9660;';
+        expandBtn.style.visibility = 'hidden';
 
         if (!isPercussion) {
             expandBtn.onclick = (e) => {
@@ -401,7 +376,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
 
             const duplicateBtn = document.createElement('button');
             duplicateBtn.className = 'duplicate-btn';
-            duplicateBtn.innerHTML = '&#128203;'; // Unicode for clipboard icon
+            duplicateBtn.innerHTML = '&#128203;';
             duplicateBtn.onclick = (e) => {
                 e.stopPropagation();
                 MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, trHeader);
@@ -439,7 +414,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
 
         const duplicateBtn = document.createElement('button');
         duplicateBtn.className = 'duplicate-btn';
-        duplicateBtn.innerHTML = '&#128203;'; // Unicode for clipboard icon
+        duplicateBtn.innerHTML = '&#128203;';
         duplicateBtn.onclick = (e) => {
             e.stopPropagation();
             const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
@@ -464,7 +439,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
         const startPosition = e.offsetX / stepWidth;
         const snappedStart = Math.round(startPosition / 0.25) * 0.25;
 
-        const notesOnTimeline = MusicMaker.notes.filter(n => n.pitch === fullPitchName && n.instrumentName === newInstrumentName);
+        const notesOnTimeline = MusicMaker.state.tracks.filter(n => n.pitch === fullPitchName && n.instrumentName === newInstrumentName);
 
         const isColliding = (start, duration) => {
             for (const note of notesOnTimeline) {
@@ -492,13 +467,13 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
         finalStart = Math.round(finalStart / 0.25) * 0.25;
 
         const newNote = {
-            id: Date.now() + Math.random(),
+            id: MusicMaker.nextNoteId++,
             instrumentName: newInstrumentName,
             pitch: fullPitchName,
             start: finalStart,
             duration: minNoteDuration
         };
-        MusicMaker.notes.push(newNote);
+        MusicMaker.state.tracks.push(newNote);
         MusicMaker.renderNote(newNote);
         MusicMaker.updateSongTotalTime();
         checkAndGrowTimeline(newNote);
@@ -508,7 +483,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
     tdTimeline.appendChild(timeline);
     trTimeline.appendChild(tdTimeline);
 
-    if (container) { // container is the parent trHeader for a new child track
+    if (container) {
         let lastChildHeader = container;
         while (lastChildHeader.nextElementSibling && lastChildHeader.nextElementSibling.classList.contains('child-track') && lastChildHeader.nextElementSibling.dataset.pitch === fullPitchName) {
             lastChildHeader = lastChildHeader.nextElementSibling;
@@ -522,11 +497,11 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
                 lastChildTimeline = lastChildTimeline.nextElementSibling;
             }
             lastChildTimeline.after(trTimeline);
-        } else { // Should not happen if container is present
+        } else {
             timelineTbody.appendChild(trTimeline);
         }
 
-    } else { // Initial track creation
+    } else {
         headersTbody.appendChild(trHeader);
         timelineTbody.appendChild(trTimeline);
     }
@@ -542,7 +517,6 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
             }
         }
     } else {
-        // This is a parent track, check if it has children and show the button
         const childTracks = document.querySelectorAll(`.child-track[data-pitch="${fullPitchName}"]`);
         if (childTracks.length > 0) {
             const expandBtn = trHeader.querySelector('.expand-btn');
@@ -561,14 +535,10 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
     MusicMaker.tracks.push(track);
 };
 
-
-
-
-
 MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
     noteElement.textContent = noteData.instrumentName.substring(0, 3);
 
-    const instrument = MusicMaker.instruments[noteData.instrumentName];
+    const instrument = MusicMaker.state.instruments[noteData.instrumentName];
     const hue = instrument ? instrument.hue : 200;
     const saturation = instrument ? instrument.saturation : 70;
 
@@ -579,7 +549,6 @@ MusicMaker.updateNoteAppearance = function(noteElement, noteData) {
     const minLightness = 25;
     const lightnessRange = maxLightness - minLightness;
 
-    // Map the pitch index (0 to totalPitches-1) to the lightness range
     const lightness = maxLightness - (overallPitchIndex / (totalPitches - 1)) * lightnessRange;
 
     noteElement.style.backgroundColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
@@ -601,7 +570,6 @@ MusicMaker.renderNote = function(note) {
     noteElement.className = 'note';
     MusicMaker.updateNoteAppearance(noteElement, note);
 
-
     noteElement.style.left = (note.start * stepWidth) + 'px';
     noteElement.style.width = (note.duration * stepWidth) + 'px';
     noteElement.dataset.noteId = note.id;
@@ -612,24 +580,24 @@ MusicMaker.renderNote = function(note) {
         const now = Date.now();
         const lastRightClick = parseFloat(noteElement.dataset.lastRightClick) || 0;
 
-        if (now - lastRightClick < 300) { // 300ms threshold for double-click
+        if (now - lastRightClick < 300) {
             const beforeState = MusicMaker.createSnapshot();
             const clickedNote = e.target;
             if (clickedNote.classList.contains('selected')) {
                 const selectedNotes = document.querySelectorAll('.note.selected');
                 selectedNotes.forEach(noteElement => {
                     const noteId = noteElement.dataset.noteId;
-                    const noteIndex = MusicMaker.notes.findIndex(n => n.id == noteId);
+                    const noteIndex = MusicMaker.state.tracks.findIndex(n => n.id == noteId);
                     if (noteIndex > -1) {
-                        MusicMaker.notes.splice(noteIndex, 1);
+                        MusicMaker.state.tracks.splice(noteIndex, 1);
                     }
                     noteElement.remove();
                 });
             } else {
                 const noteId = clickedNote.dataset.noteId;
-                const noteIndex = MusicMaker.notes.findIndex(n => n.id == noteId);
+                const noteIndex = MusicMaker.state.tracks.findIndex(n => n.id == noteId);
                 if (noteIndex > -1) {
-                    MusicMaker.notes.splice(noteIndex, 1);
+                    MusicMaker.state.tracks.splice(noteIndex, 1);
                 }
                 clickedNote.remove();
             }
@@ -641,7 +609,7 @@ MusicMaker.renderNote = function(note) {
 
     noteElement.addEventListener('mousemove', (e) => {
         const rect = noteElement.getBoundingClientRect();
-        const resizeHandleWidth = 5; // 5px handle
+        const resizeHandleWidth = 5;
 
         if (e.clientX > rect.right - resizeHandleWidth) {
             noteElement.style.cursor = 'e-resize';
@@ -655,7 +623,6 @@ MusicMaker.renderNote = function(note) {
     noteElement.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
 
-        // --- Selection Logic ---
         if (e.shiftKey) {
             noteElement.classList.toggle('selected');
         } else {
@@ -665,7 +632,6 @@ MusicMaker.renderNote = function(note) {
             }
         }
         MusicMaker.updateSelectorToSelection();
-        // --- End Selection Logic ---
 
         const initialX = e.pageX;
         const isResizing = noteElement.style.cursor === 'e-resize' || noteElement.style.cursor === 'w-resize';
@@ -678,9 +644,8 @@ MusicMaker.renderNote = function(note) {
         }
 
         if (noteElement.classList.contains('selected') && !isResizing) {
-            // Dragging multiple notes
             const selectedNotes = Array.from(document.querySelectorAll('.note.selected'));
-            const initialPositions = selectedNotes.map(n => ({ el: n, left: n.offsetLeft, note: MusicMaker.notes.find(nt => nt.id == n.dataset.noteId) }));
+            const initialPositions = selectedNotes.map(n => ({ el: n, left: n.offsetLeft, note: MusicMaker.state.tracks.find(nt => nt.id == n.dataset.noteId) }));
 
             function onMouseMove(moveEvent) {
                 const dx = moveEvent.pageX - initialX;
@@ -710,10 +675,9 @@ MusicMaker.renderNote = function(note) {
             document.addEventListener('mouseup', onMouseUp);
 
         } else {
-            // Dragging or resizing a single note
             const initialLeft = noteElement.offsetLeft;
             const initialWidth = noteElement.offsetWidth;
-            const noteObject = MusicMaker.notes.find(n => n.id == note.id);
+            const noteObject = MusicMaker.state.tracks.find(n => n.id == note.id);
 
             const isResizingRight = noteElement.style.cursor === 'e-resize';
             const isResizingLeft = noteElement.style.cursor === 'w-resize';
@@ -723,7 +687,6 @@ MusicMaker.renderNote = function(note) {
                 let newLeft = initialLeft;
                 let newWidth = initialWidth;
                 const positionGridSizePixels = 0.25 * stepWidth;
-                const durationGridSizePixels = minNoteDuration * stepWidth;
 
                 if (isResizingRight) {
                     newWidth = initialWidth + dx;
@@ -748,43 +711,11 @@ MusicMaker.renderNote = function(note) {
                     }
                 } else { // Moving
                     newLeft = initialLeft + dx;
-
-                    // Snap to other notes
-                    let snapToNote = null;
-                    const otherNotes = Array.from(timeline.children).filter(child => child !== noteElement && !child.classList.contains('selected'));
-                    for (const otherNote of otherNotes) {
-                        const rect = otherNote.getBoundingClientRect();
-                        if (moveEvent.clientX >= rect.left && moveEvent.clientX <= rect.right &&
-                            moveEvent.clientY >= rect.top && moveEvent.clientY <= rect.bottom) {
-                            snapToNote = otherNote;
-                            break;
-                        }
-                    }
-
-                    if (snapToNote) {
-                        const snapLeft = snapToNote.offsetLeft;
-                        const snapWidth = snapToNote.offsetWidth;
-                        const noteWidth = noteElement.offsetWidth;
-
-                        const snapToEnd = snapLeft + snapWidth;
-                        const snapToStart = snapLeft - noteWidth;
-
-                        const distToEnd = Math.abs(newLeft - snapToEnd);
-                        const distToStart = Math.abs(newLeft - snapToStart);
-
-                        if (distToStart < distToEnd) {
-                            newLeft = snapToStart;
-                        } else {
-                            newLeft = snapToEnd;
-                        }
-                    } else {
-                        // Grid snapping
-                        const gridSizePixels = GRID_TIME_UNIT * stepWidth;
-                        const snappedLeft = Math.round(newLeft / gridSizePixels) * gridSizePixels;
-                        const snapTolerance = 4; // pixels
-                        if (Math.abs(newLeft - snappedLeft) < snapTolerance) {
-                            newLeft = snappedLeft;
-                        }
+                    const gridSizePixels = GRID_TIME_UNIT * stepWidth;
+                    const snappedLeft = Math.round(newLeft / gridSizePixels) * gridSizePixels;
+                    const snapTolerance = 4;
+                    if (Math.abs(newLeft - snappedLeft) < snapTolerance) {
+                        newLeft = snappedLeft;
                     }
                 }
 
@@ -795,10 +726,8 @@ MusicMaker.renderNote = function(note) {
                     durationTooltip.style.top = moveEvent.pageY + 15 + 'px';
                 }
 
-                // Collision detection
-                if (newLeft < 0) {
-                    newLeft = 0;
-                }
+                if (newLeft < 0) newLeft = 0;
+                
                 const otherNotes = Array.from(timeline.children).filter(child => child !== noteElement && !child.classList.contains('selected'));
                 let collision = false;
                 for (const otherNote of otherNotes) {
@@ -812,15 +741,13 @@ MusicMaker.renderNote = function(note) {
 
                 if (!collision) {
                     if (isResizingRight) {
-                        if (newWidth > 0) {
-                            noteElement.style.width = newWidth + 'px';
-                        }
+                        if (newWidth > 0) noteElement.style.width = newWidth + 'px';
                     } else if (isResizingLeft) {
                         if (newWidth > 0) {
                             noteElement.style.left = newLeft + 'px';
                             noteElement.style.width = newWidth + 'px';
                         }
-                    } else { // Moving
+                    } else {
                         noteElement.style.left = newLeft + 'px';
                     }
                 }
@@ -871,7 +798,7 @@ MusicMaker.renderNote = function(note) {
 
 MusicMaker.renderAllNotes = function() {
     document.querySelectorAll('.note').forEach(el => el.remove());
-    MusicMaker.notes.forEach(note => MusicMaker.renderNote(note));
+    MusicMaker.state.tracks.forEach(note => MusicMaker.renderNote(note));
 };
 
 MusicMaker.getTrackLayout = function() {
@@ -892,6 +819,8 @@ MusicMaker.getTrackLayout = function() {
             }
         }
     });
+    MusicMaker.state.trackLayout = layout;
+    MusicMaker.state.collapseState = collapseState;
     return { layout, collapseState };
 };
 
@@ -906,13 +835,13 @@ MusicMaker.updateSelectorToSelection = function() {
     const selectedNoteElements = document.querySelectorAll('.note.selected');
 
     if (selectedNoteElements.length === 0) {
-        selector.value = ''; // Reset to default
+        selector.value = '';
         return;
     }
 
     const selectedNotesData = [];
     selectedNoteElements.forEach(el => {
-        const note = MusicMaker.notes.find(n => String(n.id) === el.dataset.noteId);
+        const note = MusicMaker.state.tracks.find(n => String(n.id) === el.dataset.noteId);
         if (note) {
             selectedNotesData.push(note);
         }
@@ -923,7 +852,6 @@ MusicMaker.updateSelectorToSelection = function() {
         return;
     }
 
-    // Sort by pitch to find the highest one
     selectedNotesData.sort((a, b) => MusicMaker.comparePitches(b.pitch, a.pitch));
 
     const highestPitchNote = selectedNotesData[0];
@@ -1121,7 +1049,6 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
         let elementUnderMouse = document.elementFromPoint(e.clientX, e.clientY);
         let timelineUnderMouse = elementUnderMouse ? elementUnderMouse.closest('.timeline-col') : null;
 
-        // Make vertical selection sticky: if mouse is off a track, use the last known one
         if (timelineUnderMouse) {
             baseTimeline = timelineUnderMouse;
         }
@@ -1188,7 +1115,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
                 const noteData = ghostNote.data;
                 const newStart = (noteData.start * stepWidth + finalValidationDx) / stepWidth;
                 newNotes.push({
-                    id: Date.now() + Math.random(),
+                    id: MusicMaker.nextNoteId++,
                     instrumentName: ghostNote.currentTimeline.dataset.instrument,
                     pitch: ghostNote.currentTimeline.parentElement.parentElement.dataset.pitch,
                     start: newStart,
@@ -1198,7 +1125,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
         });
 
         newNotes.forEach(note => {
-            MusicMaker.notes.push(note);
+            MusicMaker.state.tracks.push(note);
             MusicMaker.renderNote(note);
         });
 
@@ -1240,19 +1167,19 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
 };
 function checkAndGrowTimeline(newNote) {
     const noteEndTimeInUnits = newNote.start + newNote.duration;
-    const remainingTimeInUnits = songTotalTime - noteEndTimeInUnits;
+    const remainingTimeInUnits = MusicMaker.state.songTotalTime - noteEndTimeInUnits;
     const thresholdInUnits = AUTOGROW_THRESHOLD_SECONDS / TIME_UNIT_TO_SECONDS;
 
     if (remainingTimeInUnits < thresholdInUnits) {
         const growAmountInUnits = AUTOGROW_AMOUNT_SECONDS / TIME_UNIT_TO_SECONDS;
-        songTotalTime += growAmountInUnits;
+        MusicMaker.state.songTotalTime += growAmountInUnits;
         updateTimelineWidth();
     }
 }
 
 function updateTimelineWidth() {
     const timelines = document.querySelectorAll('.timeline-col');
-    const newWidth = songTotalTime * stepWidth;
+    const newWidth = MusicMaker.state.songTotalTime * stepWidth;
     timelines.forEach(timeline => {
         timeline.style.minWidth = newWidth + 'px';
         timeline.style.backgroundSize = stepWidth + 'px 100%';
@@ -1266,12 +1193,9 @@ MusicMaker.setTempo = function(tempo) {
     if (tempoSlider) {
         tempoSlider.value = tempo;
         tempoValue.textContent = tempo;
-        // Manually trigger the input event to update minNoteDuration
         tempoSlider.dispatchEvent(new Event('input'));
     }
 }
-
-
 
 MusicMaker.drawTimelineRuler = function() {
     const ruler = document.getElementById('timeline-ruler');
@@ -1282,10 +1206,9 @@ MusicMaker.drawTimelineRuler = function() {
     const timeUnit = 0.05 * tempo;
     if (timeUnit <= 0) return;
 
-    const songTotalTimeInSeconds = songTotalTime * timeUnit;
+    const songTotalTimeInSeconds = MusicMaker.state.songTotalTime * timeUnit;
     const pixelsPerSecond = stepWidth / timeUnit;
 
-    // Determine major label spacing to avoid overlap when zoomed out
     let majorLabelStep = 1;
     if (pixelsPerSecond < 60) majorLabelStep = 2;
     if (pixelsPerSecond < 30) majorLabelStep = 5;
@@ -1293,11 +1216,10 @@ MusicMaker.drawTimelineRuler = function() {
     if (pixelsPerSecond < 8) majorLabelStep = 20;
     if (pixelsPerSecond < 4) majorLabelStep = 60;
 
-    // Determine marker spacing for sub-seconds when zoomed in
-    let markerSubStep = 1; // How many markers per second
-    if (pixelsPerSecond >= 100) markerSubStep = 2; // 0.5s
-    if (pixelsPerSecond >= 200) markerSubStep = 4; // 0.25s
-    if (pixelsPerSecond >= 400) markerSubStep = 8; // 0.125s
+    let markerSubStep = 1;
+    if (pixelsPerSecond >= 100) markerSubStep = 2;
+    if (pixelsPerSecond >= 200) markerSubStep = 4;
+    if (pixelsPerSecond >= 400) markerSubStep = 8;
 
     const increment = 1 / markerSubStep;
 
@@ -1306,7 +1228,6 @@ MusicMaker.drawTimelineRuler = function() {
         const marker = document.createElement('div');
         marker.className = 'time-marker';
 
-        // Use a small tolerance for floating point modulo checks
         const isMajorTick = Math.abs(i % majorLabelStep) < 0.001 || Math.abs(i % majorLabelStep - majorLabelStep) < 0.001;
         const isSecondTick = Math.abs(i % 1) < 0.001 || Math.abs(i % 1 - 1) < 0.001;
         const isHalfTick = markerSubStep >= 2 && (Math.abs(i % 0.5) < 0.001 || Math.abs(i % 0.5 - 0.5) < 0.001);
@@ -1320,20 +1241,18 @@ MusicMaker.drawTimelineRuler = function() {
         } else if (isSecondTick) {
             marker.style.height = '75%';
             marker.style.borderLeft = '1px solid #888';
-        } else if (isHalfTick && pixelsPerSecond >= 200) { // Add labels for 0.5s at high zoom
+        } else if (isHalfTick && pixelsPerSecond >= 200) {
             marker.style.height = '60%';
             marker.style.borderLeft = '1px solid #777';
             labelText = i.toFixed(2);
         } else {
             marker.style.height = '50%';
             marker.style.borderLeft = '1px solid #666';
-            // Add labels for 0.25s at very high zoom
             if (markerSubStep >= 4 && pixelsPerSecond >= 400) {
                  labelText = i.toFixed(2);
             }
         }
 
-        // Prevent duplicate labels
         if (labelText !== null && isMajorTick && i !== Math.round(i)) {
             labelText = null;
         }
@@ -1379,7 +1298,7 @@ MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, parentHea
     const instrumentSelector = document.createElement('select');
     const existingInstruments = Array.from(document.querySelectorAll(`#track-headers-table tr[data-pitch="${pitch}"]`)).map(tr => tr.dataset.instrument);
 
-    for (const inst in MusicMaker.instruments) {
+    for (const inst in MusicMaker.state.instruments) {
         if (!existingInstruments.includes(inst)) {
             const option = document.createElement('option');
             option.value = inst;
@@ -1418,17 +1337,16 @@ MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, parentHea
 MusicMaker.duplicateTrack = function(pitch, oldInstrumentName, newInstrumentName, parentHeader) {
     const beforeState = MusicMaker.createSnapshot();
 
-    // Ensure parent is expanded to make the new track visible
     if (parentHeader.classList.contains('collapsed')) {
         parentHeader.querySelector('.expand-btn').click();
     }
 
     MusicMaker.addTrack(pitch, false, parentHeader, newInstrumentName, true, false);
 
-    const originalNotes = MusicMaker.notes.filter(n => n.pitch === pitch && n.instrumentName === oldInstrumentName);
+    const originalNotes = MusicMaker.state.tracks.filter(n => n.pitch === pitch && n.instrumentName === oldInstrumentName);
     originalNotes.forEach(note => {
-        const newNote = { ...note, id: Date.now() + Math.random(), instrumentName: newInstrumentName };
-        MusicMaker.notes.push(newNote);
+        const newNote = { ...note, id: MusicMaker.nextNoteId++, instrumentName: newInstrumentName };
+        MusicMaker.state.tracks.push(newNote);
         MusicMaker.renderNote(newNote);
     });
 

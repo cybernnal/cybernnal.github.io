@@ -4,18 +4,20 @@ MusicMaker.Storage = (function() {
 
     const STORAGE_KEY = 'musicMakerState';
 
-    function saveState(tracks, songTotalTime, trackLayout, instruments, collapseState, volume) {
+    function saveState(state) {
         try {
-            const state = {
-                tracks: tracks,
-                songTotalTime: songTotalTime,
-                trackLayout: trackLayout,
-                instruments: instruments,
-                collapseState: collapseState,
-                volume: volume
+            // Create a serializable version of the state
+            const stateToSave = {
+                tracks: state.tracks,
+                songTotalTime: state.songTotalTime,
+                trackLayout: state.trackLayout,
+                instruments: state.instruments,
+                collapseState: state.collapseState,
+                volume: state.volume
             };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
         } catch (e) {
+            console.error("Error saving state to localStorage:", e);
         }
     }
 

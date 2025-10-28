@@ -103,7 +103,7 @@ class Playback {
         this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
         const timeUnit = 0.05 * this.currentTempo;
 
-        MusicMaker.notes.forEach(note => {
+        MusicMaker.state.tracks.forEach(note => {
             const instrumentName = note.instrumentName;
             const noteSize = MusicMaker.getNoteSize(note);
             let buffer = this.soundBuffer;
@@ -181,7 +181,7 @@ class Playback {
         }
 
         const timeUnit = 0.05 * this.currentTempo;
-        const songTotalTimeInSeconds = songTotalTime * timeUnit;
+        const songTotalTimeInSeconds = MusicMaker.state.songTotalTime * timeUnit;
 
         this.playbackPosition = this.audioContext.currentTime - this.startTime;
         MusicMaker.updateCursor(this.playbackPosition);

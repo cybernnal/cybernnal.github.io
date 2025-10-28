@@ -843,7 +843,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-        for (const instrumentName in MusicMaker.instruments) {
+        for (const instrumentName in MusicMaker.state.instruments) {
 
     
 
@@ -871,19 +871,55 @@ MusicMaker.MidiImport = (function() {
 
     
 
-        // Check if an instrument with the same name already exists
+                // Check if an instrument with the same name already exists
 
     
 
-        if (MusicMaker.instruments[inst.name]) {
+        
 
     
 
-            select.value = inst.name;
+        
 
     
 
-            abbrInput.value = MusicMaker.instruments[inst.name].exportName || inst.name.substring(0, 3).toLowerCase();
+        
+
+    
+
+                if (MusicMaker.state.instruments[inst.name]) {
+
+    
+
+        
+
+    
+
+        
+
+    
+
+        
+
+    
+
+                    select.value = inst.name;
+
+    
+
+        
+
+    
+
+        
+
+    
+
+        
+
+    
+
+                    abbrInput.value = MusicMaker.state.instruments[inst.name].exportName || inst.name.substring(0, 3).toLowerCase();
 
     
 
@@ -911,7 +947,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                abbrInput.value = MusicMaker.instruments[selected].exportName || selected.substring(0, 3).toLowerCase();
+                abbrInput.value = MusicMaker.state.instruments[selected].exportName || selected.substring(0, 3).toLowerCase();
 
     
 
@@ -979,7 +1015,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-            const existingInstruments = MusicMaker.instruments;
+            const existingInstruments = MusicMaker.state.instruments;
 
     
 
@@ -1195,7 +1231,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                        if (!MusicMaker.instruments[inst.name]) {
+                        if (!MusicMaker.state.instruments[inst.name]) {
 
     
 
@@ -1437,7 +1473,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                            id: Date.now() + Math.random(),
+                            id: MusicMaker.nextNoteId++,
 
     
 
@@ -1580,7 +1616,7 @@ MusicMaker.MidiImport = (function() {
                     notes.forEach(note => {
                         if (note.instrument === 'percussion') {
                             const pitchName = `Percussion ${note.pitch}`;
-                            if (!MusicMaker.instruments[pitchName]) {
+                            if (!MusicMaker.state.instruments[pitchName]) {
                                 const exportName = `p${note.pitch}`;
                                 MusicMaker.createCustomInstrument(pitchName, exportName);
                             }
@@ -1633,7 +1669,7 @@ MusicMaker.MidiImport = (function() {
 
     
 
-                        instruments: MusicMaker.instruments
+                        instruments: MusicMaker.state.instruments
 
     
 
