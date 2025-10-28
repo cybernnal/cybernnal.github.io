@@ -79,25 +79,51 @@ MusicMaker.MidiImport = (function() {
 
     
 
+function ticksToAbsoluteSeconds(ticks, tempoEvents, timeDivision) {
+    return convertTicksToSeconds(0, ticks, tempoEvents, timeDivision);
+}
+
+function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) {
+    let durationInSeconds = 0;
+    let currentTicks = startTicks;
+    let tempoIndex = 0;
+
+    while (tempoIndex < tempoEvents.length - 1 && tempoEvents[tempoIndex + 1].ticks <= startTicks) {
+        tempoIndex++;
+    }
+
+    while (currentTicks < endTicks) {
+        const currentTempo = tempoEvents[tempoIndex].tempo; // microseconds per quarter note
+        const nextTempoEventTicks = (tempoIndex + 1 < tempoEvents.length) ? tempoEvents[tempoIndex + 1].ticks : endTicks;
+        const ticksInThisSegment = Math.min(endTicks, nextTempoEventTicks) - currentTicks;
+
+        const secondsPerTick = (currentTempo / 1000000) / timeDivision;
+        durationInSeconds += ticksInThisSegment * secondsPerTick;
+
+        currentTicks += ticksInThisSegment;
+        if (currentTicks >= nextTempoEventTicks && tempoIndex + 1 < tempoEvents.length) {
+            tempoIndex++;
+        }
+    }
+    return durationInSeconds;
+}
         function processMidiData(midiData, fileInfo, beforeState) {
 
             const timeDivision = midiData.timeDivision;
 
-            let tempo = 120;
+            const tempoEvents = [{ ticks: 0, tempo: 500000 }]; // Default to 120 BPM
 
-            if (midiData.track.length > 0) {
+            midiData.track.forEach(track => {
+                let absoluteTick = 0;
+                track.event.forEach(event => {
+                    absoluteTick += event.deltaTime;
+                    if (event.type === 0xFF && event.metaType === 0x51) {
+                        tempoEvents.push({ ticks: absoluteTick, tempo: event.data });
+                    }
+                });
+            });
 
-                const tempoEvent = midiData.track[0].event.find(e => e.type === 0x51);
-
-                if (tempoEvent) {
-
-                    tempo = 60000000 / tempoEvent.data;
-
-                }
-
-            }
-
-            const scalingFactor = 10 / timeDivision;
+            tempoEvents.sort((a, b) => a.ticks - b.ticks);
 
     
 
@@ -196,21 +222,16 @@ MusicMaker.MidiImport = (function() {
     
 
                                     if (duration > 0) {
+                                        const startInSeconds = ticksToAbsoluteSeconds(start, tempoEvents, timeDivision);
+                                        const durationInSeconds = convertTicksToSeconds(start, currentTime, tempoEvents, timeDivision);
 
                                         notes.push({
-
                                             pitch: noteNumber,
-
-                                            start: start * scalingFactor,
-
-                                            duration: duration * scalingFactor,
-
+                                            start: startInSeconds / 0.05,
+                                            duration: durationInSeconds / 0.05,
                                             instrument: channel === 9 ? 'percussion' : channelInstruments[channel],
-
                                             channel: channel
-
                                         });
-
                                     }
 
                                     delete activeNotes[noteNumber];
@@ -238,21 +259,16 @@ MusicMaker.MidiImport = (function() {
     
 
                                 if (duration > 0) {
+                                    const startInSeconds = ticksToAbsoluteSeconds(start, tempoEvents, timeDivision);
+                                    const durationInSeconds = convertTicksToSeconds(start, currentTime, tempoEvents, timeDivision);
 
                                     notes.push({
-
                                         pitch: noteNumber,
-
-                                        start: start * scalingFactor,
-
-                                        duration: duration * scalingFactor,
-
+                                        start: startInSeconds / 0.05,
+                                        duration: durationInSeconds / 0.05,
                                         instrument: channel === 9 ? 'percussion' : channelInstruments[channel],
-
                                         channel: channel
-
                                     });
-
                                 }
 
                                 delete activeNotes[noteNumber];
