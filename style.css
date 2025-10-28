@@ -54,9 +54,18 @@ html, body {
     background-color: #2a2a2a;
 }
 
-#track-headers-table td,
-#timeline-table td {
+#track-headers-table td {
     border: 1px solid #555;
+    box-sizing: border-box;
+    padding: 0;
+    height: 17px;
+}
+
+#timeline-table td {
+    border-bottom: 2px solid #2a2a2a;
+    border-top: none;
+    border-left: none;
+    border-right: none;
     box-sizing: border-box;
     padding: 0;
     height: 17px;
@@ -69,7 +78,7 @@ html, body {
 .timeline-col {
     position: relative;
     height: 100%;
-    background-image: linear-gradient(to right, #444 1px, transparent 1px);
+    background-image: linear-gradient(to right, #2a2a2a 2px, transparent 1px);
     background-size: 50px 100%;
     min-width: 2000px;
 }
@@ -421,4 +430,12 @@ tr.highlighted .timeline-col {
     margin-top: 15px;
     font-style: italic;
     color: #ccc;
+}
+
+#timeline-table td.timeline-white-key {
+    background-color: #4a4a4a;
+}
+
+#timeline-table td.timeline-black-key {
+    background-color: #3e3e3e;
 }

@@ -532,6 +532,11 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
     trHeader.appendChild(tdHeader);
 
     const tdTimeline = document.createElement('td');
+    if (isBlackKey) {
+        tdTimeline.classList.add('timeline-black-key');
+    } else {
+        tdTimeline.classList.add('timeline-white-key');
+    }
     const timeline = document.createElement('div');
     timeline.className = 'timeline-col';
     timeline.dataset.instrument = newInstrumentName;
