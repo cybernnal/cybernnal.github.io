@@ -78,7 +78,6 @@ html, body {
 .timeline-col {
     position: relative;
     height: 100%;
-    background-image: linear-gradient(to right, #2a2a2a 2px, transparent 1px);
     background-size: 50px 100%;
     min-width: 2000px;
 }

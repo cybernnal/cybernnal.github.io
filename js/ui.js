@@ -1292,6 +1292,11 @@ function updateTimelineWidth() {
     timelines.forEach(timeline => {
         timeline.style.minWidth = newWidth + 'px';
         timeline.style.backgroundSize = stepWidth + 'px 100%';
+        if (stepWidth < 5) {
+            timeline.style.backgroundImage = 'none';
+        } else {
+            timeline.style.backgroundImage = 'linear-gradient(to right, #2a2a2a 2px, transparent 1px)';
+        }
     });
     MusicMaker.drawTimelineRuler();
 }
