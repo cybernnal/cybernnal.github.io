@@ -291,38 +291,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const updates = [];
         tracksToChange.forEach((trackInfo) => {
             const { pitch, instrumentName: originalInstrument } = trackInfo;
             if (originalInstrument === instrumentName) return;
 
-            MusicMaker.state.tracks.forEach(note_to_check => {
-                if (note_to_check.pitch === pitch && note_to_check.instrumentName === originalInstrument) {
-                    note_to_check.instrumentName = instrumentName;
+            const trackObject = MusicMaker.tracks.find(t => t.pitch === pitch && t.instrumentName === originalInstrument);
+            const headerTrackElement = document.querySelector(`#track-headers-table tr[data-pitch="${pitch}"][data-instrument="${originalInstrument}"]`);
+            const timelineTrackElement = document.querySelector(`#timeline-table tr[data-pitch="${pitch}"][data-instrument="${originalInstrument}"]`);
+
+            updates.push({ pitch, originalInstrument, trackObject, headerTrackElement, timelineTrackElement });
+        });
+
+        updates.forEach(({ pitch, originalInstrument }) => {
+            MusicMaker.state.tracks.forEach(note => {
+                if (note.pitch === pitch && note.instrumentName === originalInstrument) {
+                    note.instrumentName = instrumentName;
                 }
             });
+        });
 
-            let headerTrackElement = null;
-            for (const row of document.querySelectorAll('#track-headers-table tr')) {
-                if (row.dataset.pitch === pitch && row.dataset.instrument === originalInstrument) {
-                    headerTrackElement = row;
-                    break;
-                }
-            }
-
-            let timelineTrackElement = null;
-            for (const row of document.querySelectorAll('#timeline-table tr')) {
-                if (row.dataset.pitch === pitch && row.dataset.instrument === originalInstrument) {
-                    timelineTrackElement = row;
-                    break;
-                }
-            }
-
-            const trackObject = MusicMaker.tracks.find(t => t.pitch === pitch && t.instrumentName === originalInstrument);
-
+        updates.forEach(({ trackObject }) => {
             if (trackObject) {
                 trackObject.instrumentName = instrumentName;
             }
+        });
 
+        updates.forEach(({ headerTrackElement, timelineTrackElement }) => {
             if (headerTrackElement) headerTrackElement.dataset.instrument = instrumentName;
             if (timelineTrackElement) {
                 timelineTrackElement.dataset.instrument = instrumentName;

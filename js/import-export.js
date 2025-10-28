@@ -188,7 +188,20 @@ MusicMaker.exportTracks = function(songData) {
         return;
     }
 
-    const sortedTracks = [...tracks].sort((a, b) => a.start - b.start);
+    const allNotes = [];
+    tracks.forEach(note => {
+        allNotes.push(note);
+        const trackId = `${note.pitch}|${note.instrumentName}`;
+        const harmonics = MusicMaker.state.harmonics[trackId];
+        if (harmonics) {
+            harmonics.forEach(harmonic => {
+                const harmonicNote = { ...note, instrumentName: harmonic.instrumentName, pitch: harmonic.pitch };
+                allNotes.push(harmonicNote);
+            });
+        }
+    });
+
+    const sortedTracks = [...allNotes].sort((a, b) => a.start - b.start);
 
     let exportParts = [];
     let lastTime = 0;
@@ -234,9 +247,18 @@ MusicMaker.exportTracks = function(songData) {
 
                 if (instrumentCode && sizeCode) {
                     const midi = MusicMaker.noteNameToMidi(note.pitch);
-                    const range = MusicMaker.instrumentData.instruments[note.instrumentName].sizeRanges[size];
-                    const pitchName = OCTAVE_PITCH_NAMES[range[1] - midi];
-                    exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                    const instrumentData = MusicMaker.instrumentData.instruments[note.instrumentName];
+                    if (instrumentData && instrumentData.sizeRanges) {
+                        const range = instrumentData.sizeRanges[size];
+                        if (range) {
+                            const pitchName = OCTAVE_PITCH_NAMES[range[1] - midi];
+                            exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                        }
+                    } else {
+                        // Handle custom instruments without sizeRanges
+                        const pitchName = OCTAVE_PITCH_NAMES[127 - midi];
+                        exportParts.push(`${sizeCode}${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                    }
                 }
             }
         });

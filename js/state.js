@@ -9,6 +9,7 @@ MusicMaker.state = {
     volume: 1,
     undoStack: [],
     redoStack: [],
+    harmonics: {},
     UNDO_LIMIT: 20
 };
 
@@ -20,6 +21,7 @@ MusicMaker.createSnapshot = function() {
         songTotalTime: MusicMaker.state.songTotalTime,
         trackLayout: layout,
         instruments: JSON.parse(JSON.stringify(MusicMaker.state.instruments)),
+        harmonics: JSON.parse(JSON.stringify(MusicMaker.state.harmonics)),
         collapseState: collapseState,
         volume: MusicMaker.state.volume
     };
@@ -68,6 +70,7 @@ MusicMaker.applyState = function(state) {
     MusicMaker.state.trackLayout = state.trackLayout || null;
     MusicMaker.state.collapseState = state.collapseState || {};
     MusicMaker.state.volume = state.volume || 1;
+    MusicMaker.state.harmonics = state.harmonics || {};
 
     // Rebuild UI from the new state
     const trackPitches = state.trackLayout ? MusicMaker.ALL_PITCH_NAMES.filter(pitch => state.trackLayout.hasOwnProperty(pitch)) : null;

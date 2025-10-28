@@ -13,6 +13,7 @@ MusicMaker.Storage = (function() {
                 trackLayout: state.trackLayout,
                 instruments: state.instruments,
                 collapseState: state.collapseState,
+                harmonics: state.harmonics,
                 volume: state.volume
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));

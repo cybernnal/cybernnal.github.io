@@ -137,6 +137,41 @@ class Playback {
                 source.stop(noteEndTime);
                 this.playingSources.push(source);
             }
+
+            const trackId = `${note.pitch}|${note.instrumentName}`;
+            const harmonics = MusicMaker.state.harmonics[trackId];
+            if (harmonics) {
+                harmonics.forEach(harmonic => {
+                    const harmonicNote = { ...note, instrumentName: harmonic.instrumentName, pitch: harmonic.pitch };
+                    const harmonicInstrumentName = harmonicNote.instrumentName;
+                    const harmonicNoteSize = MusicMaker.getNoteSize(harmonicNote);
+                    let harmonicBuffer = this.soundBuffer;
+                    let harmonicBaseNote = 'F#3';
+
+                    if (this.instrumentBuffers[harmonicInstrumentName] && this.instrumentBuffers[harmonicInstrumentName][harmonicNoteSize]) {
+                        harmonicBuffer = this.instrumentBuffers[harmonicInstrumentName][harmonicNoteSize];
+                        const harmonicOctave = parseInt(harmonicNote.pitch.replace(/[^0-9]/g, ''), 10);
+                        harmonicBaseNote = `F#${harmonicOctave}`;
+                    }
+
+                    if (!harmonicBuffer) {
+                        return;
+                    }
+
+                    const harmonicSource = this.audioContext.createBufferSource();
+                    harmonicSource.buffer = harmonicBuffer;
+                    harmonicSource.loop = true;
+                    harmonicSource.playbackRate.value = this.calculatePlaybackRate(harmonicNote, harmonicBaseNote);
+                    harmonicSource.connect(this.preGainNode);
+
+                    if (noteEndTime > this.audioContext.currentTime) {
+                        const offset = Math.max(0, this.audioContext.currentTime - noteStartTime);
+                        harmonicSource.start(Math.max(this.audioContext.currentTime, noteStartTime), offset);
+                        harmonicSource.stop(noteEndTime);
+                        this.playingSources.push(harmonicSource);
+                    }
+                });
+            }
         });
 
         this.rafId = requestAnimationFrame(this.update.bind(this));

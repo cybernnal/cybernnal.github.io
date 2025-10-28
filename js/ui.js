@@ -247,25 +247,125 @@ MusicMaker.createUI = function(trackPitches = null, trackLayout = null, collapse
     }, 0);
 };
 
-MusicMaker.createCustomInstrument = function(displayName, exportName) {
-    const usedHues = Object.values(MusicMaker.state.instruments).map(inst => inst.hue);
-    let randomHue;
-    do {
-        randomHue = Math.floor(Math.random() * 360);
-    } while (usedHues.includes(randomHue));
+MusicMaker.createHarmonicsModal = function(pitch, instrumentName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
 
-    MusicMaker.state.instruments[displayName] = {
-        exportName: exportName,
-        noteRange: [0, 127],
-        hue: randomHue,
-        saturation: 70
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+
+    const title = document.createElement('h2');
+    title.textContent = `Harmonics for ${pitch} - ${instrumentName}`;
+    modalContent.appendChild(title);
+
+    const instrumentSelector = document.createElement('select');
+    for (const inst in MusicMaker.state.instruments) {
+        const option = document.createElement('option');
+        option.value = inst;
+        option.textContent = inst.charAt(0).toUpperCase() + inst.slice(1);
+        instrumentSelector.appendChild(option);
+    }
+    modalContent.appendChild(instrumentSelector);
+
+    const pitchSelector = document.createElement('select');
+    modalContent.appendChild(pitchSelector);
+
+    function updatePitchSelector() {
+        const selectedInstrument = instrumentSelector.value;
+        const instrumentData = MusicMaker.instrumentData.instruments[selectedInstrument];
+        pitchSelector.innerHTML = '';
+
+        if (instrumentData) {
+            const [minMidi, maxMidi] = instrumentData.noteRange;
+            const availablePitches = MusicMaker.ALL_PITCH_NAMES.filter(pitch => {
+                const midi = MusicMaker.noteNameToMidi(pitch);
+                return midi >= minMidi && midi <= maxMidi;
+            });
+
+            availablePitches.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                pitchSelector.appendChild(option);
+            });
+        } else {
+            // For custom instruments with no defined range, show all pitches
+            MusicMaker.ALL_PITCH_NAMES.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                pitchSelector.appendChild(option);
+            });
+        }
+    }
+
+    instrumentSelector.addEventListener('change', updatePitchSelector);
+    updatePitchSelector();
+
+    const addBtn = document.createElement('button');
+    addBtn.textContent = 'Add Harmonic';
+    addBtn.onclick = () => {
+        const beforeState = MusicMaker.createSnapshot();
+        const selectedInstrument = instrumentSelector.value;
+        const selectedPitch = pitchSelector.value;
+
+        const instrumentData = MusicMaker.instrumentData.instruments[selectedInstrument];
+        if (instrumentData) {
+            const midi = MusicMaker.noteNameToMidi(selectedPitch);
+            if (midi < instrumentData.noteRange[0] || midi > instrumentData.noteRange[1]) {
+                alert(`The selected instrument '${selectedInstrument}' cannot play the pitch '${selectedPitch}'.`);
+                return;
+            }
+        }
+
+        const trackId = `${pitch}|${instrumentName}`;
+        if (!MusicMaker.state.harmonics[trackId]) {
+            MusicMaker.state.harmonics[trackId] = [];
+        }
+
+        MusicMaker.state.harmonics[trackId].push({ instrumentName: selectedInstrument, pitch: selectedPitch });
+        renderHarmonicsList();
+        MusicMaker.commitChange(beforeState);
     };
+    modalContent.appendChild(addBtn);
 
-    const selector = document.getElementById('instrument-selector');
-    const option = document.createElement('option');
-    option.value = displayName;
-    option.textContent = displayName.charAt(0).toUpperCase() + displayName.slice(1);
-    selector.insertBefore(option, selector.lastChild);
+    const harmonicsList = document.createElement('div');
+    modalContent.appendChild(harmonicsList);
+
+    function renderHarmonicsList() {
+        harmonicsList.innerHTML = '';
+        const trackId = `${pitch}|${instrumentName}`;
+        const harmonics = MusicMaker.state.harmonics[trackId] || [];
+
+        harmonics.forEach((harmonic, index) => {
+            const harmonicItem = document.createElement('div');
+            harmonicItem.textContent = `${harmonic.instrumentName} - ${harmonic.pitch}`;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = () => {
+                const beforeState = MusicMaker.createSnapshot();
+                MusicMaker.state.harmonics[trackId].splice(index, 1);
+                renderHarmonicsList();
+                MusicMaker.commitChange(beforeState);
+            };
+            harmonicItem.appendChild(deleteBtn);
+            harmonicsList.appendChild(harmonicItem);
+        });
+    }
+
+    renderHarmonicsList();
+
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.onclick = () => {
+        modal.remove();
+    };
+    modalContent.appendChild(closeBtn);
+
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
 };
 
 MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instrumentName = 'diapason', isChild = false, isCollapsed = true, percIndex = -1) {
@@ -374,14 +474,16 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
             };
             trackControls.appendChild(addBtn);
 
-            const duplicateBtn = document.createElement('button');
-            duplicateBtn.className = 'duplicate-btn';
-            duplicateBtn.innerHTML = '&#128203;';
-            duplicateBtn.onclick = (e) => {
+            const harmonicsBtn = document.createElement('button');
+            harmonicsBtn.className = 'harmonics-btn';
+            harmonicsBtn.innerHTML = '&#127926;'; // Music note emoji
+            harmonicsBtn.onclick = (e) => {
                 e.stopPropagation();
-                MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, trHeader);
+                MusicMaker.createHarmonicsModal(fullPitchName, newInstrumentName);
             };
-            trackControls.appendChild(duplicateBtn);
+            trackControls.appendChild(harmonicsBtn);
+
+
         }
 
     } else { // Child track
@@ -412,15 +514,16 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
         };
         trackControls.appendChild(deleteBtn);
 
-        const duplicateBtn = document.createElement('button');
-        duplicateBtn.className = 'duplicate-btn';
-        duplicateBtn.innerHTML = '&#128203;';
-        duplicateBtn.onclick = (e) => {
+        const harmonicsBtn = document.createElement('button');
+        harmonicsBtn.className = 'harmonics-btn';
+        harmonicsBtn.innerHTML = '&#127926;'; // Music note emoji
+        harmonicsBtn.onclick = (e) => {
             e.stopPropagation();
-            const parentHeader = document.querySelector(`.parent-track[data-pitch="${fullPitchName}"]`);
-            MusicMaker.createDuplicateTrackModal(fullPitchName, newInstrumentName, parentHeader);
+            MusicMaker.createHarmonicsModal(fullPitchName, newInstrumentName);
         };
-        trackControls.appendChild(duplicateBtn);
+        trackControls.appendChild(harmonicsBtn);
+
+
     }
 
     keyContentWrapper.appendChild(trackControls);
@@ -530,7 +633,8 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
         trHeader: trHeader,
         trTimeline: trTimeline,
         timeline: timeline,
-        notes: []
+        notes: [],
+        harmonics: []
     };
     MusicMaker.tracks.push(track);
 };
@@ -1282,73 +1386,3 @@ MusicMaker.updateCursor = function(positionInSeconds) {
         cursor.style.left = (positionInBeats * stepWidth) + 'px';
     }
 }
-
-MusicMaker.createDuplicateTrackModal = function(pitch, instrumentName, parentHeader) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.style.display = 'flex';
-
-    const modalContent = document.createElement('div');
-    modalContent.className = 'modal-content';
-
-    const title = document.createElement('h2');
-    title.textContent = `Duplicate Track for ${pitch}`;
-    modalContent.appendChild(title);
-
-    const instrumentSelector = document.createElement('select');
-    const existingInstruments = Array.from(document.querySelectorAll(`#track-headers-table tr[data-pitch="${pitch}"]`)).map(tr => tr.dataset.instrument);
-
-    for (const inst in MusicMaker.state.instruments) {
-        if (!existingInstruments.includes(inst)) {
-            const option = document.createElement('option');
-            option.value = inst;
-            option.textContent = inst.charAt(0).toUpperCase() + inst.slice(1);
-            instrumentSelector.appendChild(option);
-        }
-    }
-    modalContent.appendChild(instrumentSelector);
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'modal-buttons';
-
-    const confirmBtn = document.createElement('button');
-    confirmBtn.textContent = 'Confirm';
-    confirmBtn.onclick = () => {
-        const selectedInstrument = instrumentSelector.value;
-        if (selectedInstrument) {
-            MusicMaker.duplicateTrack(pitch, instrumentName, selectedInstrument, parentHeader);
-            modal.remove();
-        }
-    };
-    buttonContainer.appendChild(confirmBtn);
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.onclick = () => {
-        modal.remove();
-    };
-    buttonContainer.appendChild(cancelBtn);
-
-    modalContent.appendChild(buttonContainer);
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-};
-
-MusicMaker.duplicateTrack = function(pitch, oldInstrumentName, newInstrumentName, parentHeader) {
-    const beforeState = MusicMaker.createSnapshot();
-
-    if (parentHeader.classList.contains('collapsed')) {
-        parentHeader.querySelector('.expand-btn').click();
-    }
-
-    MusicMaker.addTrack(pitch, false, parentHeader, newInstrumentName, true, false);
-
-    const originalNotes = MusicMaker.state.tracks.filter(n => n.pitch === pitch && n.instrumentName === oldInstrumentName);
-    originalNotes.forEach(note => {
-        const newNote = { ...note, id: MusicMaker.nextNoteId++, instrumentName: newInstrumentName };
-        MusicMaker.state.tracks.push(newNote);
-        MusicMaker.renderNote(newNote);
-    });
-
-    MusicMaker.commitChange(beforeState);
-};
