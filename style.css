@@ -27,6 +27,7 @@ html, body {
 }
 
 #track-headers-container {
+    min-width: 110px;
     position: sticky;
     left: 0;
     z-index: 5;
@@ -201,7 +202,11 @@ html, body {
     width: auto;
 }
 
-.expand-btn, .add-btn, .delete-btn, .duplicate-btn {
+
+
+
+
+.expand-btn, .add-btn, .delete-btn, .harmonics-btn {
     background: none;
     border: none;
     cursor: pointer;
@@ -211,9 +216,13 @@ html, body {
     line-height: 1;
 }
 
-.duplicate-btn {
-    font-size: 12px;
+.harmonics-btn {
+    color: #000;
 }
+
+
+
+
 
 .key {
   flex-grow: 1;
@@ -230,13 +239,27 @@ html, body {
     flex-grow: 1;
 }
 
-.key--white .expand-btn, .key--white .add-btn, .key--white .delete-btn {
+.key--white .expand-btn, .key--white .add-btn, .key--white .delete-btn, .key--white .harmonics-btn {
     color: #000;
 }
 
-.key--black .expand-btn, .key--black .add-btn, .key--black .delete-btn {
+.key--white .harmonics-btn svg {
+    fill: #000;
+    position: relative;
+    top: 2px;
+}
+
+.key--black .harmonics-btn svg {
+    fill: #fff;
+    position: relative;
+    top: 2px;
+}
+
+.key--black .expand-btn, .key--black .add-btn, .key--black .delete-btn, .key--black .harmonics-btn {
     color: #fff;
 }
+
+
 
 .key--white {
   background-color: #fff;
@@ -251,7 +274,6 @@ html, body {
 .key--percussion {
   background-color: #ccc;
   color: #000;
-  justify-content: flex-end;
 }
 
 tr.highlighted .key {

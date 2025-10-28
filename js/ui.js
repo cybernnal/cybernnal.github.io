@@ -475,8 +475,8 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
             trackControls.appendChild(addBtn);
 
             const harmonicsBtn = document.createElement('button');
-            harmonicsBtn.className = 'harmonics-btn';
-            harmonicsBtn.innerHTML = '&#127926;'; // Music note emoji
+            harmonicsBtn.className = 'harmonics-btn track-control-btn';
+            harmonicsBtn.innerHTML = '<svg class="harmonics-icon" width="13" height="13" fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 364.59 364.591" xml:space="preserve"><g><g><path d="M360.655,258.05V25c0-13.807-11.191-25-25-25H130.09c-13.807,0-25,11.193-25,25v206.27c-10.569-3.184-22.145-4.271-34.058-2.768C29.527,233.738-0.293,268.3,4.427,305.695c4.719,37.396,42.189,63.464,83.694,58.226c40.015-5.049,66.969-37.146,66.969-73.181V50h155.564v146.794c-10.591-3.2-22.19-4.297-34.134-2.79c-41.504,5.237-71.323,39.798-66.604,77.193s42.188,63.464,83.694,58.227C332.951,324.458,360.655,293.275,360.655,258.05z"/></g></g></svg>';
             harmonicsBtn.onclick = (e) => {
                 e.stopPropagation();
                 MusicMaker.createHarmonicsModal(fullPitchName, newInstrumentName);
@@ -516,7 +516,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
 
         const harmonicsBtn = document.createElement('button');
         harmonicsBtn.className = 'harmonics-btn';
-        harmonicsBtn.innerHTML = '&#127926;'; // Music note emoji
+        harmonicsBtn.innerHTML = '<svg class="harmonics-icon" width="13" height="13" fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 364.59 364.591" xml:space="preserve"><g><g><path d="M360.655,258.05V25c0-13.807-11.191-25-25-25H130.09c-13.807,0-25,11.193-25,25v206.27c-10.569-3.184-22.145-4.271-34.058-2.768C29.527,233.738-0.293,268.3,4.427,305.695c4.719,37.396,42.189,63.464,83.694,58.226c40.015-5.049,66.969-37.146,66.969-73.181V50h155.564v146.794c-10.591-3.2-22.19-4.297-34.134-2.79c-41.504,5.237-71.323,39.798-66.604,77.193s42.188,63.464,83.694,58.227C332.951,324.458,360.655,293.275,360.655,258.05z"/></g></g></svg>';
         harmonicsBtn.onclick = (e) => {
             e.stopPropagation();
             MusicMaker.createHarmonicsModal(fullPitchName, newInstrumentName);
