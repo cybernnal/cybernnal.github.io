@@ -100,8 +100,7 @@ class Playback {
         }
         this.startTime = this.audioContext.currentTime - this.playbackPosition;
 
-        this.currentTempo = parseInt(document.getElementById('tempo-slider').value, 10);
-        const timeUnit = 0.05 * this.currentTempo;
+        const timeUnit = 0.05 / this.currentTempo;
 
         MusicMaker.state.tracks.forEach(note => {
             const instrumentName = note.instrumentName;
@@ -203,11 +202,11 @@ class Playback {
 
         const newTempo = parseInt(document.getElementById('tempo-slider').value, 10);
         if (newTempo !== this.currentTempo) {
-            const oldTimeUnit = 0.05 * this.currentTempo;
+            const oldTimeUnit = 0.05 / this.currentTempo;
             const positionInSeconds = this.audioContext.currentTime - this.startTime;
             const positionInBeats = positionInSeconds / oldTimeUnit;
 
-            const newTimeUnit = 0.05 * newTempo;
+            const newTimeUnit = 0.05 / newTempo;
             this.playbackPosition = positionInBeats * newTimeUnit;
 
             this.pause();
@@ -215,7 +214,7 @@ class Playback {
             return;
         }
 
-        const timeUnit = 0.05 * this.currentTempo;
+        const timeUnit = 0.05 / this.currentTempo;
         const songTotalTimeInSeconds = MusicMaker.state.songTotalTime * timeUnit;
 
         this.playbackPosition = this.audioContext.currentTime - this.startTime;

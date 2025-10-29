@@ -21,6 +21,36 @@ MusicMaker.MidiImport = (function() {
         "Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet", "Telephone Ring", "Helicopter", "Applause", "Gunshot"
     ];
 
+    function gcd(a, b) {
+        return b ? gcd(b, a % b) : a;
+    }
+
+    function lcm(a, b) {
+        if (a === 0 || b === 0) return 0;
+        return Math.abs(a * b) / gcd(a, b);
+    }
+
+    function getDenominator(x, limit = 1000) {
+        if (x === 0) return 1;
+        const tolerance = 1.0E-5;
+        let h1 = 1;
+        let h2 = 0;
+        let k1 = 0;
+        let k2 = 1;
+        let b = x;
+        do {
+            const a = Math.floor(b);
+            let aux = h1;
+            h1 = a * h1 + h2;
+            h2 = aux;
+            aux = k1;
+            k1 = a * k1 + k2;
+            k2 = aux;
+            b = 1 / (b - a);
+        } while (Math.abs(x - h1 / k1) > tolerance && k1 <= limit);
+        return k1 > limit ? limit : k1;
+    }
+
         function importMidi(beforeState) {
 
             const input = document.createElement('input');
@@ -62,7 +92,7 @@ MusicMaker.MidiImport = (function() {
                         processMidiData(midiData, fileInfo, beforeState);
 
                     } catch (error) {
-
+                        console.error(error);
                         alert('Failed to parse MIDI file. The file may be corrupt or in an unsupported format.');
 
                     }
@@ -128,6 +158,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
     
 
             const notes = [];
+            let noteIdCounter = 0;
 
             const instruments = new Map();
 
@@ -226,6 +257,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
                                         const durationInSeconds = convertTicksToSeconds(start, currentTime, tempoEvents, timeDivision);
 
                                         notes.push({
+                                            id: noteIdCounter++,
                                             pitch: noteNumber,
                                             start: startInSeconds / 0.05,
                                             duration: durationInSeconds / 0.05,
@@ -263,6 +295,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
                                     const durationInSeconds = convertTicksToSeconds(start, currentTime, tempoEvents, timeDivision);
 
                                     notes.push({
+                                        id: noteIdCounter++,
                                         pitch: noteNumber,
                                         start: startInSeconds / 0.05,
                                         duration: durationInSeconds / 0.05,
@@ -291,426 +324,275 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
             }
 
+            const minDuration = notes.length > 0 ? notes.reduce((min, note) => Math.min(min, note.duration), Infinity) : 0;
+
     
 
-            showTranspositionModal(notes, instruments, minPitch, maxPitch, pitches, fileInfo, beforeState);
+            showTranspositionModal(notes, instruments, minPitch, maxPitch, pitches, fileInfo, beforeState, minDuration);
 
         }
 
     
 
-            function showTranspositionModal(notes, instruments, minPitch, maxPitch, pitches, fileInfo, beforeState) {
+            function showTranspositionModal(notes, instruments, minPitch, maxPitch, pitches, fileInfo, beforeState, minDuration) {
 
-    
+                function calculateRoundingError(multiplier) {
+                    let totalError = 0;
+                    notes.forEach(note => {
+                        const scaledStart = note.start * multiplier;
+                        const quantizedStart = Math.round(scaledStart / 0.05) * 0.05;
+                        if (scaledStart.toFixed(5) !== quantizedStart.toFixed(5)) {
+                            const startError = Math.abs(scaledStart - quantizedStart) / multiplier;
+                            totalError += startError;
+                        }
+
+                        const scaledDuration = note.duration * multiplier;
+                        const quantizedDuration = Math.round(scaledDuration / 0.05) * 0.05;
+                        if (scaledDuration.toFixed(5) !== quantizedDuration.toFixed(5)) {
+                            const durationError = Math.abs(scaledDuration - quantizedDuration) / multiplier;
+                            totalError += durationError;
+                        }
+                    });
+                    return totalError;
+                }
 
                 const modal = document.getElementById('midi-transposition-modal');
-
-    
-
                 const analysisEl = document.getElementById('transposition-analysis');
-
-    
-
                 const semitonesInput = document.getElementById('transpose-semitones');
-
-    
-
                 const infoEl = document.getElementById('transposition-info');
+                const confirmBtn = document.getElementById('confirm-transposition');
 
-    
+                const maxMultiplierInput = document.getElementById('max-multiplier-input');
+                const bestMatchOptionsEl = document.getElementById('best-match-options');
+                const tempoScalingInfoEl = document.getElementById('tempo-scaling-info');
 
-                                const confirmBtn = document.getElementById('confirm-transposition');
-
-    
-
-                
-
-    
-
-                                const APP_MIN_PITCH = 6; // F#-1
-
-    
-
-                                const APP_MAX_PITCH = 109; // C#8
-
-    
-
+                const APP_MIN_PITCH = 6; // F#-1
+                const APP_MAX_PITCH = 109; // C#8
                 const APP_RANGE = APP_MAX_PITCH - APP_MIN_PITCH;
 
-    
-
-        
-
-    
+                const totalTime = notes.length > 0 ? notes.reduce((max, note) => Math.max(max, note.start + note.duration), 0) : 0;
 
                 const sortedPitches = [...pitches].sort((a, b) => a - b);
-
-    
-
                 analysisEl.innerHTML = `
-
-    
-
                     This MIDI has notes from ${MusicMaker.midiToNoteName(minPitch)} (pitch ${minPitch}) to ${MusicMaker.midiToNoteName(maxPitch)} (pitch ${maxPitch}). <br><br> 
-
-    
-
                     Unique pitches found (${sortedPitches.length}): ${sortedPitches.join(', ')}
-
-    
-
                 `;
 
-    
-
-        
-
-    
-
                 const midiRange = maxPitch - minPitch;
-
-    
-
                 let bestFit = 0;
-
-    
-
                 if (midiRange > APP_RANGE) {
-
-    
-
-                    // Center the MIDI range in the app range
-
-    
-
                     const midiCenter = (minPitch + maxPitch) / 2;
-
-    
-
                     const appCenter = (APP_MIN_PITCH + APP_MAX_PITCH) / 2;
-
-    
-
                     bestFit = Math.round(appCenter - midiCenter);
-
-    
-
                 } else {
-
-    
-
-                    // Fit the whole MIDI range in the app range
-
-    
-
                     if (minPitch < APP_MIN_PITCH) {
-
-    
-
                         bestFit = APP_MIN_PITCH - minPitch;
-
-    
-
                     } else if (maxPitch > APP_MAX_PITCH) {
-
-    
-
                         bestFit = APP_MAX_PITCH - maxPitch;
-
-    
-
                     }
-
-    
-
                 }
-
-    
-
-        
-
-    
-
                 semitonesInput.value = bestFit;
 
-    
-
-        
-
-    
-
-                function updateInfo() {
-
-    
-
+                function updatePitchInfo() {
                     const transposeBy = parseInt(semitonesInput.value, 10) || 0;
-
-    
-
                     const newMin = minPitch + transposeBy;
-
-    
-
                     const newMax = maxPitch + transposeBy;
 
-    
-
-        
-
-    
-
                     let clippedLow = 0;
-
-    
-
                     let clippedHigh = 0;
-
-    
-
-        
-
-    
-
                     notes.forEach(note => {
-
-    
-
                         const newPitch = note.pitch + transposeBy;
-
-    
-
                         if (newPitch < APP_MIN_PITCH) clippedLow++;
-
-    
-
                         if (newPitch > APP_MAX_PITCH) clippedHigh++;
-
-    
-
                     });
-
-    
-
-        
-
-    
 
                     let infoText = `The new range will be ${MusicMaker.midiToNoteName(newMin)} to ${MusicMaker.midiToNoteName(newMax)}.`;
-
-    
-
                     if (clippedLow > 0 || clippedHigh > 0) {
-
-    
-
                         infoText += ` Warning: ${clippedLow} notes will be below the playable range and ${clippedHigh} notes will be above.`;
-
-    
-
                     }
-
-    
-
                     infoEl.textContent = infoText;
-
-    
-
                 }
 
-    
+                updatePitchInfo();
+                semitonesInput.oninput = updatePitchInfo;
 
-        
+                // --- Tempo Scaling Logic ---
+                const MAX_MULTIPLIER = 1024;
+                let trueGridMultiplier = 1;
+                let denominators = [];
+                if (notes.length > 0) {
+                    const allTimings = [];
+                    notes.forEach(n => {
+                        if(n.start > 0) allTimings.push(n.start);
+                        if(n.duration > 0) allTimings.push(n.duration);
+                    });
+                    if (allTimings.length > 0) {
+                        denominators = allTimings.map(t => getDenominator(t));
+                        trueGridMultiplier = denominators.reduce((acc, d) => lcm(acc, d), 1);
+                        if (trueGridMultiplier > MAX_MULTIPLIER || !isFinite(trueGridMultiplier)) {
+                            trueGridMultiplier = MAX_MULTIPLIER;
+                        }
+                    }
+                }
 
-    
+                function getTempoScalingOptions(trueGridMultiplier, maxMultiplier, denominators) {
+                    const options = new Map();
+                    options.set('none', { multiplier: 1, label: 'None' });
 
-                updateInfo();
+                    const candidateMultipliers = [];
+                    for (let i = 1; i <= maxMultiplier; i += 0.05) {
+                        candidateMultipliers.push(i);
+                    }
 
-    
+                    const candidates = [];
+                    for (const multiplier of candidateMultipliers) {
+                        candidates.push({ multiplier, error: calculateRoundingError(multiplier) });
+                    }
 
-        
+                    candidates.sort((a, b) => a.error - b.error);
 
-    
+                    const best3 = candidates.slice(0, 3);
 
-                semitonesInput.oninput = updateInfo;
+                    if (best3[0]) {
+                        options.set('best', { multiplier: best3[0].multiplier, label: 'Best Quality' });
+                    }
+                    if (best3[1]) {
+                        options.set('balanced', { multiplier: best3[1].multiplier, label: 'Balanced' });
+                    }
+                    if (best3[2]) {
+                        options.set('small', { multiplier: best3[2].multiplier, label: 'Smallest Change' });
+                    }
 
-    
+                    return options;
+                }
 
-        
+                function updateAlignmentOptions() {
+                    const maxMultiplier = parseFloat(maxMultiplierInput.value) || 2;
+                    const options = getTempoScalingOptions(trueGridMultiplier, maxMultiplier, denominators);
 
-    
+                    bestMatchOptionsEl.innerHTML = '';
+                    let infoText = '';
+                    for (const [key, option] of options.entries()) {
+                        const { multiplier, label } = option;
+                        
+                        infoText = `<b>${label}</b>: `;
+                        
+                        if (multiplier >= 1 && key !== 'none') {
+                            const newTotalTime = totalTime * multiplier;
+                            const percentageIncrease = ((newTotalTime / totalTime) - 1) * 100;
+                            infoText += `Scales song by ~x${multiplier.toFixed(2)}. New length: ~${(newTotalTime * 0.05).toFixed(2)}s (${percentageIncrease.toFixed(0)}% longer).<br>`;
+                            
+                            let totalError = 0;
+                            let maxError = 0;
+                            const affectedNotes = new Set();
+                            let notesBelowMin = 0;
 
-                confirmBtn.onclick = () => {
+                            notes.forEach(note => {
+                                const scaledStart = note.start * multiplier;
+                                const quantizedStart = Math.round(scaledStart / 0.05) * 0.05;
+                                if (scaledStart.toFixed(5) !== quantizedStart.toFixed(5)) {
+                                    affectedNotes.add(note.id);
+                                    const startError = Math.abs(scaledStart - quantizedStart) / multiplier;
+                                    totalError += startError;
+                                    maxError = Math.max(maxError, startError);
+                                }
+                                if (quantizedStart < 1 && note.start > 0) {
+                                    notesBelowMin++;
+                                }
 
-    
+                                const scaledDuration = note.duration * multiplier;
+                                const quantizedDuration = Math.round(scaledDuration / 0.05) * 0.05;
+                                if (scaledDuration.toFixed(5) !== quantizedDuration.toFixed(5)) {
+                                    affectedNotes.add(note.id);
+                                    const durationError = Math.abs(scaledDuration - quantizedDuration) / multiplier;
+                                    totalError += durationError;
+                                    maxError = Math.max(maxError, durationError);
+                                }
+                                if (quantizedDuration < 1 && note.duration > 0) {
+                                    notesBelowMin++;
+                                }
+                            });
 
-                    const transposeBy = parseInt(semitonesInput.value, 10) || 0;
+                            const avgErrorMs = (notes.length > 0 ? (totalError / (notes.length * 2)) : 0) * 0.05 * 1000;
+                            const maxErrorMs = maxError * 0.05 * 1000;
 
-    
-
-                    const playableNotes = [];
-
-    
-
-                    const clippedNotes = [];
-
-    
-
-        
-
-    
-
-                    notes.forEach(note => {
-
-    
-
-                        const newPitch = note.pitch + transposeBy;
-
-    
-
-                        const newNote = { ...note, pitch: newPitch };
-
-    
-
-                        if (newPitch < APP_MIN_PITCH || newPitch > APP_MAX_PITCH) {
-
-    
-
-                            newNote.isClipped = true;
-
-    
-
-                            clippedNotes.push(newNote);
-
-    
+                            infoText += `Rounds timing of ${affectedNotes.size} notes. Avg deviation: ${avgErrorMs.toFixed(2)}ms, Max: ${maxErrorMs.toFixed(2)}ms.`
+                            
+                            if (notesBelowMin > 0) {
+                                infoText += `<br><span style="color: red;">Warning: ${notesBelowMin} timings will become shorter than 0.05s.</span>`;
+                            }
 
                         } else {
-
-    
-
-                            playableNotes.push(newNote);
-
-    
-
+                            infoText += `No scaling. Timings will not be aligned to the grid.`;
                         }
 
-    
+                        const optionEl = document.createElement('div');
+                        optionEl.innerHTML = `<input type="radio" id="scale-${key}" name="scale-option" value="${key}" ${key === 'none' ? 'checked' : ''}> <label for="scale-${key}">${infoText}</label>`;
+                        bestMatchOptionsEl.appendChild(optionEl);
+                    }
+                }
 
+                updateAlignmentOptions();
+                maxMultiplierInput.oninput = updateAlignmentOptions;
+
+                confirmBtn.onclick = () => {
+                    const transposeBy = parseInt(semitonesInput.value, 10) || 0;
+                    
+                    const selectedOptionKey = document.querySelector('input[name="scale-option"]:checked').value;
+                    
+                    const maxMultiplier = parseFloat(maxMultiplierInput.value) || 2;
+                    const options = getTempoScalingOptions(trueGridMultiplier, maxMultiplier, denominators);
+
+                    const selectedOption = options.get(selectedOptionKey);
+                    let tempoMultiplier = selectedOption.multiplier;
+
+                    if (tempoMultiplier <= 1) {
+                        tempoMultiplier = 1;
+                    }
+
+                    let scaledNotes = notes;
+                    if (tempoMultiplier > 1) {
+                        scaledNotes = notes.map(note => ({
+                            ...note,
+                            start: Math.round((note.start * tempoMultiplier) / 0.05) * 0.05,
+                            duration: Math.round((note.duration * tempoMultiplier) / 0.05) * 0.05
+                        }));
+
+                        const tempoSlider = document.getElementById('tempo-slider');
+                        const tempoValue = document.getElementById('tempo-value');
+                        const newTempo = Math.min(Math.round(tempoMultiplier), 20);
+                        tempoSlider.value = newTempo;
+                        tempoValue.textContent = newTempo;
+                        MusicMaker.state.tempo = newTempo;
+                    }
+
+                    const playableNotes = [];
+                    const clippedNotes = [];
+                    scaledNotes.forEach(note => {
+                        const newPitch = note.pitch + transposeBy;
+                        const newNote = { ...note, pitch: newPitch };
+                        if (newPitch < APP_MIN_PITCH || newPitch > APP_MAX_PITCH) {
+                            newNote.isClipped = true;
+                            clippedNotes.push(newNote);
+                        } else {
+                            playableNotes.push(newNote);
+                        }
                     });
 
-    
+                    modal.style.display = 'none';
 
-        
-
-    
-
-                                            modal.style.display = 'none';
-
-    
-
-        
-
-    
-
-                                
-
-    
-
-        
-
-    
-
-                                            if (clippedNotes.length > 0) {
-
-    
-
-        
-
-    
-
-                                                const confirmed = confirm(`${clippedNotes.length} notes are outside the playable range. You can use an external editor to fix the file first.\n\nClick 'OK' to clip the notes and continue, or 'Cancel' to stop the import.`);
-
-    
-
-        
-
-    
-
-                                                if (confirmed) {
-
-    
-
-        
-
-    
-
-                                                    showInstrumentModal(Array.from(instruments.values()), playableNotes, beforeState);
-
-    
-
-        
-
-    
-
-                                                }
-
-    
-
-        
-
-    
-
-                                            } else {
-
-    
-
-        
-
-    
-
-                                                showInstrumentModal(Array.from(instruments.values()), playableNotes, beforeState);
-
-    
-
-        
-
-    
-
-                                            }
-
-    
-
-        
-
-    
-
-                            };
-
-    
-
-        
-
-    
-
-                    
-
-    
-
-        
-
-    
-
-                            modal.style.display = 'flex';
-
-    
-
-        
-
-    
-
+                    if (clippedNotes.length > 0) {
+                        const confirmed = confirm(`${clippedNotes.length} notes are outside the playable range. You can use an external editor to fix the file first.\n\nClick 'OK' to clip the notes and continue, or 'Cancel' to stop the import.`);
+                        if (confirmed) {
+                            showInstrumentModal(Array.from(instruments.values()), playableNotes, beforeState);
                         }
+                    } else {
+                        showInstrumentModal(Array.from(instruments.values()), playableNotes, beforeState);
+                    }
+                };
 
-    
-
+                modal.style.display = 'flex';
+            }
         
 
     

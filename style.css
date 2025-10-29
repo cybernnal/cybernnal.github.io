@@ -342,16 +342,15 @@ tr.highlighted .timeline-col {
 }
 
 .modal-content {
-    background-color: #333;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 400px;
-    text-align: center;
-    color: #fff;
-    border-radius: 8px;
+  background-color: #333;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 800px;
+  text-align: center;
+  color: #fff;
+  border-radius: 8px;
 }
-
 .modal-content h2 {
     margin-top: 0;
 }
@@ -437,4 +436,29 @@ tr.highlighted .timeline-col {
 
 #timeline-table td.timeline-black-key {
     background-color: #3e3e3e;
+}
+
+.modal-columns {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.modal-column {
+    flex: 1;
+    background: #f0f0f0;
+    padding: 15px;
+    border-radius: 5px;
+    color: #333;
+}
+
+#best-match-options div {
+    margin-bottom: 10px;
+}
+
+#best-match-options label {
+    display: block;
+    background: #e9e9e9;
+    padding: 10px;
+    border-radius: 5px;
 }
