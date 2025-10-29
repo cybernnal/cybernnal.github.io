@@ -1236,7 +1236,10 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
         newNotes.forEach(note => {
             MusicMaker.state.tracks.push(note);
             MusicMaker.renderNote(note);
+            checkAndGrowTimeline(note);
         });
+
+        MusicMaker.updateSongTotalTime();
 
         MusicMaker.commitChange(beforeState);
 
