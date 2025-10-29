@@ -149,6 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedState = MusicMaker.Storage.load();
     if (savedState) {
         Object.assign(MusicMaker.state, savedState);
+        if (MusicMaker.state.tracks && MusicMaker.state.tracks.length > 0) {
+            const maxId = Math.max(...MusicMaker.state.tracks.map(n => n.id || 0));
+            MusicMaker.nextNoteId = maxId + 1;
+        }
     } else {
         MusicMaker.state.instruments = MusicMaker.instrumentData.instruments;
     }
