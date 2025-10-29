@@ -340,14 +340,14 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
                     let totalError = 0;
                     notes.forEach(note => {
                         const scaledStart = note.start * multiplier;
-                        const quantizedStart = Math.round(scaledStart / 0.05) * 0.05;
+                        const quantizedStart = Math.round(scaledStart);
                         if (scaledStart.toFixed(5) !== quantizedStart.toFixed(5)) {
                             const startError = Math.abs(scaledStart - quantizedStart) / multiplier;
                             totalError += startError;
                         }
 
                         const scaledDuration = note.duration * multiplier;
-                        const quantizedDuration = Math.round(scaledDuration / 0.05) * 0.05;
+                        const quantizedDuration = Math.round(scaledDuration);
                         if (scaledDuration.toFixed(5) !== quantizedDuration.toFixed(5)) {
                             const durationError = Math.abs(scaledDuration - quantizedDuration) / multiplier;
                             totalError += durationError;
@@ -489,7 +489,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
                             notes.forEach(note => {
                                 const scaledStart = note.start * multiplier;
-                                const quantizedStart = Math.round(scaledStart / 0.05) * 0.05;
+                                const quantizedStart = Math.round(scaledStart);
                                 if (scaledStart.toFixed(5) !== quantizedStart.toFixed(5)) {
                                     affectedNotes.add(note.id);
                                     const startError = Math.abs(scaledStart - quantizedStart) / multiplier;
@@ -501,7 +501,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
                                 }
 
                                 const scaledDuration = note.duration * multiplier;
-                                const quantizedDuration = Math.round(scaledDuration / 0.05) * 0.05;
+                                const quantizedDuration = Math.round(scaledDuration);
                                 if (scaledDuration.toFixed(5) !== quantizedDuration.toFixed(5)) {
                                     affectedNotes.add(note.id);
                                     const durationError = Math.abs(scaledDuration - quantizedDuration) / multiplier;
@@ -551,16 +551,16 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
                     }
 
                     let scaledNotes = notes;
-                    if (tempoMultiplier > 1) {
+                    if (selectedOptionKey !== 'none') {
                         scaledNotes = notes.map(note => ({
                             ...note,
-                            start: Math.round((note.start * tempoMultiplier) / 0.05) * 0.05,
-                            duration: Math.round((note.duration * tempoMultiplier) / 0.05) * 0.05
+                            start: Math.round(note.start * tempoMultiplier),
+                            duration: Math.round(note.duration * tempoMultiplier)
                         }));
 
                         const tempoSlider = document.getElementById('tempo-slider');
                         const tempoValue = document.getElementById('tempo-value');
-                        const newTempo = Math.min(Math.round(tempoMultiplier), 20);
+                        const newTempo = Math.max(1, Math.min(Math.round(tempoMultiplier), 20));
                         tempoSlider.value = newTempo;
                         tempoValue.textContent = newTempo;
                         MusicMaker.state.tempo = newTempo;
@@ -1535,7 +1535,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
     
 
-                    MusicMaker.applyState({
+                                                            MusicMaker.applyState({
 
     
 
@@ -1543,7 +1543,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
     
 
-                        tracks: newNotes,
+            
 
     
 
@@ -1551,7 +1551,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
     
 
-                        songTotalTime: songTotalTime + 100,
+                                        
 
     
 
@@ -1559,7 +1559,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
     
 
-                        trackLayout: fullTrackLayout,
+            
 
     
 
@@ -1567,7 +1567,7 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
     
 
-                        instruments: MusicMaker.state.instruments
+                                                                tracks: newNotes,
 
     
 
@@ -1575,7 +1575,127 @@ function convertTicksToSeconds(startTicks, endTicks, tempoEvents, timeDivision) 
 
     
 
-                    });
+            
+
+    
+
+        
+
+    
+
+                                        
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                                                songTotalTime: songTotalTime + 100,
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                                                trackLayout: fullTrackLayout,
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                                                instruments: MusicMaker.state.instruments
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                        
+
+    
+
+        
+
+    
+
+            
+
+    
+
+        
+
+    
+
+                                                            });
 
     
 
