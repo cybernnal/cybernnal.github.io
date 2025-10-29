@@ -10,6 +10,7 @@ MusicMaker.state = {
     undoStack: [],
     redoStack: [],
     harmonics: {},
+    stepWidth: 50,
     UNDO_LIMIT: 20
 };
 

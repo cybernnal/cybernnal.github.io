@@ -153,8 +153,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxId = Math.max(...MusicMaker.state.tracks.map(n => n.id || 0));
             MusicMaker.nextNoteId = maxId + 1;
         }
+        MusicMaker.state.zoomLevel = savedState.zoomLevel || 10;
     } else {
         MusicMaker.state.instruments = MusicMaker.instrumentData.instruments;
+        MusicMaker.state.zoomLevel = 10;
+        MusicMaker.state.songTotalTime = 30;
     }
 
     const trackLayout = MusicMaker.state.trackLayout;
@@ -165,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
     MusicMaker.setupEventListeners();
     MusicMaker.setupCursorEventListeners();
     MusicMaker.renderAllNotes();
-    updateTimelineWidth();
 
     const volumeSlider = document.getElementById('volume-slider');
     volumeSlider.value = MusicMaker.state.volume;
@@ -178,9 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         MusicMaker.Storage.save(MusicMaker.state);
     });
 
-    MusicMaker.state.undoStack.push(MusicMaker.createSnapshot());
-
-    document.getElementById('zoom-slider').value = stepWidth;
+    setTimeout(() => MusicMaker.initializeView(), 0);
 
     document.getElementById('importBtn').addEventListener('click', () => {
         const beforeState = MusicMaker.createSnapshot();
@@ -226,15 +226,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const beforeState = MusicMaker.createSnapshot();
         MusicMaker.Storage.clear();
         MusicMaker.state.tracks = [];
-        MusicMaker.state.songTotalTime = 0;
+        MusicMaker.state.songTotalTime = 30;
         MusicMaker.state.trackLayout = null;
         MusicMaker.state.collapseState = {};
         MusicMaker.createUI();
         MusicMaker.populateInstrumentSelector();
-        updateTimelineWidth();
         MusicMaker.setupEventListeners();
-        MusicMaker.updateCursorHeight();
-        MusicMaker.updateCursor(0);
+        setTimeout(() => MusicMaker.initializeView(), 0);
         MusicMaker.commitChange(beforeState);
         resetModal.style.display = 'none';
     });
@@ -454,6 +452,4 @@ document.addEventListener('DOMContentLoaded', () => {
             MusicMaker.redo();
         }
     });
-    MusicMaker.updateCursor(0);
-    MusicMaker.updateCursorHeight();
 });

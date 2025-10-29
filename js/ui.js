@@ -11,7 +11,7 @@ for (let midi = 109; midi >= 6; midi--) { // C#8 is 109, F#-1 is 6
     MusicMaker.ALL_PITCH_NAMES.push(noteNames[noteIndex] + octave);
 }
 
-let stepWidth = 50;
+
 let minNoteDuration = 1;
 
 const tempo3Durations = [];
@@ -73,7 +73,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const zoomSlider = document.getElementById('zoom-slider');
     if (zoomSlider) {
         zoomSlider.addEventListener('input', (e) => {
-            stepWidth = parseInt(e.target.value, 10);
+            const zoomLevel = parseInt(e.target.value, 10);
+            const reversedZoomLevel = 121 - zoomLevel;
+            MusicMaker.state.zoomLevel = zoomLevel;
+            MusicMaker.Storage.save(MusicMaker.state);
+
+            const timelineContainer = document.getElementById('main-content');
+            const timelineWidth = timelineContainer.offsetWidth;
+
+            const minZoomDuration = 20;
+            const maxZoomDuration = 2400;
+            
+            const duration = minZoomDuration + ((maxZoomDuration - minZoomDuration) * ( (reversedZoomLevel - 1) / 119));
+
+            MusicMaker.state.stepWidth = timelineWidth / duration;
+
             updateTimelineWidth();
             MusicMaker.renderAllNotes();
             MusicMaker.updateCursor(MusicMaker.Playback.playbackPosition);
@@ -544,7 +558,7 @@ MusicMaker.addTrack = function(fullPitchName, isButton, container = null, instru
     timeline.addEventListener('dblclick', (e) => {
         const beforeState = MusicMaker.createSnapshot();
         if (e.button !== 0) return;
-        const startPosition = e.offsetX / stepWidth;
+        const startPosition = e.offsetX / MusicMaker.state.stepWidth;
         const snappedStart = Math.round(startPosition / 0.25) * 0.25;
 
         const notesOnTimeline = MusicMaker.state.tracks.filter(n => n.pitch === fullPitchName && n.instrumentName === newInstrumentName);
@@ -679,8 +693,8 @@ MusicMaker.renderNote = function(note) {
     noteElement.className = 'note';
     MusicMaker.updateNoteAppearance(noteElement, note);
 
-    noteElement.style.left = (note.start * stepWidth) + 'px';
-    noteElement.style.width = (note.duration * stepWidth) + 'px';
+    noteElement.style.left = (note.start * MusicMaker.state.stepWidth) + 'px';
+    noteElement.style.width = (note.duration * MusicMaker.state.stepWidth) + 'px';
     noteElement.dataset.noteId = note.id;
 
     noteElement.dataset.lastRightClick = 0;
@@ -775,7 +789,7 @@ MusicMaker.renderNote = function(note) {
                 const beforeState = MusicMaker.createSnapshot();
                 initialPositions.forEach(pos => {
                     const finalLeft = pos.el.offsetLeft;
-                    pos.note.start = finalLeft / stepWidth;
+                    pos.note.start = finalLeft / MusicMaker.state.stepWidth;
                 });
                 MusicMaker.commitChange(beforeState);
             }
@@ -795,17 +809,17 @@ MusicMaker.renderNote = function(note) {
                 const dx = moveEvent.pageX - initialX;
                 let newLeft = initialLeft;
                 let newWidth = initialWidth;
-                const positionGridSizePixels = 0.25 * stepWidth;
+                const positionGridSizePixels = 0.25 * MusicMaker.state.stepWidth;
 
                 if (isResizingRight) {
                     newWidth = initialWidth + dx;
                     let snappedWidth;
                     if (minNoteDuration === 0.33) {
-                        const newDuration = newWidth / stepWidth;
+                        const newDuration = newWidth / MusicMaker.state.stepWidth;
                         const snappedDuration = snapToTempo3Grid(newDuration);
-                        snappedWidth = snappedDuration * stepWidth;
+                        snappedWidth = snappedDuration * MusicMaker.state.stepWidth;
                     } else {
-                        const durationGridSizePixels = minNoteDuration * stepWidth;
+                        const durationGridSizePixels = minNoteDuration * MusicMaker.state.stepWidth;
                         snappedWidth = Math.round(newWidth / durationGridSizePixels) * durationGridSizePixels;
                     }
                     newWidth = snappedWidth;
@@ -820,7 +834,7 @@ MusicMaker.renderNote = function(note) {
                     }
                 } else { // Moving
                     newLeft = initialLeft + dx;
-                    const gridSizePixels = GRID_TIME_UNIT * stepWidth;
+                    const gridSizePixels = GRID_TIME_UNIT * MusicMaker.state.stepWidth;
                     const snappedLeft = Math.round(newLeft / gridSizePixels) * gridSizePixels;
                     const snapTolerance = 4;
                     if (Math.abs(newLeft - snappedLeft) < snapTolerance) {
@@ -829,7 +843,7 @@ MusicMaker.renderNote = function(note) {
                 }
 
                 if (durationTooltip) {
-                    const duration = newWidth / stepWidth;
+                    const duration = newWidth / MusicMaker.state.stepWidth;
                     durationTooltip.textContent = `Duration: ${duration.toFixed(2)}`;
                     durationTooltip.style.left = moveEvent.pageX + 15 + 'px';
                     durationTooltip.style.top = moveEvent.pageY + 15 + 'px';
@@ -874,25 +888,25 @@ MusicMaker.renderNote = function(note) {
 
                 const finalLeft = noteElement.offsetLeft;
                 const finalWidth = noteElement.offsetWidth;
-                const positionGridSizePixels = 0.25 * stepWidth;
+                const positionGridSizePixels = 0.25 * MusicMaker.state.stepWidth;
 
                 const snappedLeft = Math.round(finalLeft / positionGridSizePixels) * positionGridSizePixels;
                 let snappedWidth;
 
                 if (minNoteDuration === 0.33) {
-                    const finalDuration = finalWidth / stepWidth;
+                    const finalDuration = finalWidth / MusicMaker.state.stepWidth;
                     const snappedDuration = snapToTempo3Grid(finalDuration);
-                    snappedWidth = snappedDuration * stepWidth;
+                    snappedWidth = snappedDuration * MusicMaker.state.stepWidth;
                 } else {
-                    const durationGridSizePixels = minNoteDuration * stepWidth;
+                    const durationGridSizePixels = minNoteDuration * MusicMaker.state.stepWidth;
                     snappedWidth = Math.round(finalWidth / durationGridSizePixels) * durationGridSizePixels;
                 }
 
                 noteElement.style.left = snappedLeft + 'px';
                 noteElement.style.width = snappedWidth + 'px';
 
-                noteObject.start = snappedLeft / stepWidth;
-                noteObject.duration = snappedWidth / stepWidth;
+                noteObject.start = snappedLeft / MusicMaker.state.stepWidth;
+                noteObject.duration = snappedWidth / MusicMaker.state.stepWidth;
                 MusicMaker.updateSongTotalTime();
                 MusicMaker.commitChange(beforeState);
             }
@@ -1048,7 +1062,7 @@ function findValidDragPosition(initialPositions, dx, targetTimeline) {
     }
 
     if (moveNotes) {
-        const gridSizePixels = 0.25 * stepWidth;
+        const gridSizePixels = 0.25 * MusicMaker.state.stepWidth;
         const snappedDx = Math.round(bestDx / gridSizePixels) * gridSizePixels;
         if (Math.abs(bestDx - snappedDx) < 4) {
             return snappedDx;
@@ -1069,7 +1083,7 @@ function findValidPastePosition(ghostNotes, baseTimeline, allTimelines, desiredD
                 return false;
             }
             const targetTimeline = allTimelines[targetIndex];
-            const newLeft = gn.data.start * stepWidth + dx;
+            const newLeft = gn.data.start * MusicMaker.state.stepWidth + dx;
             const noteWidth = gn.el.offsetWidth;
 
             if (newLeft < 0) return false;
@@ -1102,17 +1116,17 @@ function findValidPastePosition(ghostNotes, baseTimeline, allTimelines, desiredD
         for (const staticNote of staticNotes) {
             const staticLeft = staticNote.offsetLeft;
             const staticWidth = staticNote.offsetWidth;
-            snapCandidates.add(staticLeft + staticWidth - (gn.data.start * stepWidth));
-            snapCandidates.add(staticLeft - noteWidth - (gn.data.start * stepWidth));
+            snapCandidates.add(staticLeft + staticWidth - (gn.data.start * MusicMaker.state.stepWidth));
+            snapCandidates.add(staticLeft - noteWidth - (gn.data.start * MusicMaker.state.stepWidth));
         }
-        snapCandidates.add(-(gn.data.start * stepWidth));
+        snapCandidates.add(-(gn.data.start * MusicMaker.state.stepWidth));
     }
 
     let bestDx = null;
     let minDistance = Infinity;
 
     for (const candidateDx of snapCandidates) {
-        const gridSizePixels = 0.25 * stepWidth;
+        const gridSizePixels = 0.25 * MusicMaker.state.stepWidth;
         const snappedDx = Math.round(candidateDx / gridSizePixels) * gridSizePixels;
 
         if (checkPosition(snappedDx)) {
@@ -1140,7 +1154,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
     const ghostNotes = notesToPaste.map(note => {
         const noteElement = document.createElement('div');
         noteElement.className = 'note ghost-note';
-        noteElement.style.width = (note.duration * stepWidth) + 'px';
+        noteElement.style.width = (note.duration * MusicMaker.state.stepWidth) + 'px';
         noteElement.style.height = noteHeight + 'px';
         noteElement.style.pointerEvents = 'none';
         noteElement.style.backgroundColor = 'rgba(100, 100, 255, 0.5)';
@@ -1173,7 +1187,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
         const mouseXInTimeline = mouseX - timelineXStart;
 
         const firstNoteData = ghostNotes[0].data;
-        const desiredDxInTimeline = mouseXInTimeline - (firstNoteData.start * stepWidth);
+        const desiredDxInTimeline = mouseXInTimeline - (firstNoteData.start * MusicMaker.state.stepWidth);
 
         const calculatedDx = findValidPastePosition(ghostNotes, baseTimeline, allTimelines, desiredDxInTimeline);
 
@@ -1194,7 +1208,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
                 const targetTimelineXStart = targetTimelineRect.left - containerRect.left + mainContent.scrollLeft;
 
                 gn.el.style.top = (targetTimelineRect.top - containerRect.top + mainContent.scrollTop + noteTopMargin) + 'px';
-                gn.el.style.left = (targetTimelineXStart + gn.data.start * stepWidth + finalDx) + 'px';
+                gn.el.style.left = (targetTimelineXStart + gn.data.start * MusicMaker.state.stepWidth + finalDx) + 'px';
                 gn.el.style.opacity = '1';
                 gn.currentTimeline = targetTimeline;
                 gn.el.style.backgroundColor = isPastePositionValid ? 'rgba(100, 100, 255, 0.5)' : 'rgba(255, 100, 100, 0.5)';
@@ -1222,7 +1236,7 @@ MusicMaker.startPasting = function(notesToPaste, beforeState) {
         ghostNotes.forEach(ghostNote => {
             if (ghostNote.currentTimeline) {
                 const noteData = ghostNote.data;
-                const newStart = (noteData.start * stepWidth + finalValidationDx) / stepWidth;
+                const newStart = (noteData.start * MusicMaker.state.stepWidth + finalValidationDx) / MusicMaker.state.stepWidth;
                 newNotes.push({
                     id: MusicMaker.nextNoteId++,
                     instrumentName: ghostNote.currentTimeline.dataset.instrument,
@@ -1291,11 +1305,11 @@ function checkAndGrowTimeline(newNote) {
 
 function updateTimelineWidth() {
     const timelines = document.querySelectorAll('.timeline-col');
-    const newWidth = MusicMaker.state.songTotalTime * stepWidth;
+    const newWidth = MusicMaker.state.songTotalTime * MusicMaker.state.stepWidth;
     timelines.forEach(timeline => {
         timeline.style.minWidth = newWidth + 'px';
-        timeline.style.backgroundSize = stepWidth + 'px 100%';
-        if (stepWidth < 5) {
+        timeline.style.backgroundSize = MusicMaker.state.stepWidth + 'px 100%';
+        if (MusicMaker.state.stepWidth < 5) {
             timeline.style.backgroundImage = 'none';
         } else {
             timeline.style.backgroundImage = 'linear-gradient(to right, #2a2a2a 2px, transparent 1px)';
@@ -1324,7 +1338,7 @@ MusicMaker.drawTimelineRuler = function() {
     if (timeUnit <= 0) return;
 
     const songTotalTimeInSeconds = MusicMaker.state.songTotalTime * timeUnit;
-    const pixelsPerSecond = stepWidth / timeUnit;
+    const pixelsPerSecond = MusicMaker.state.stepWidth / timeUnit;
 
     let majorLabelStep = 1;
     if (pixelsPerSecond < 60) majorLabelStep = 2;
@@ -1341,7 +1355,7 @@ MusicMaker.drawTimelineRuler = function() {
     const increment = 1 / markerSubStep;
 
     for (let i = 0; i < songTotalTimeInSeconds; i += increment) {
-        const leftPosition = (i / timeUnit) * stepWidth;
+        const leftPosition = (i / timeUnit) * MusicMaker.state.stepWidth;
         const marker = document.createElement('div');
         marker.className = 'time-marker';
 
@@ -1395,7 +1409,18 @@ MusicMaker.updateCursor = function(positionInSeconds) {
     if (cursor) {
         const tempo = parseInt(document.getElementById('tempo-slider').value, 10);
         const timeUnit = 0.05 * tempo;
-        const positionInBeats = positionInSeconds / timeUnit;
-        cursor.style.left = (positionInBeats * stepWidth) + 'px';
+        const positionInBeats = timeUnit > 0 ? positionInSeconds / timeUnit : 0;
+        cursor.style.left = (positionInBeats * MusicMaker.state.stepWidth) + 'px';
     }
-}
+};
+
+MusicMaker.initializeView = function() {
+    const zoomSlider = document.getElementById('zoom-slider');
+    if (zoomSlider) {
+        zoomSlider.value = MusicMaker.state.zoomLevel;
+        zoomSlider.dispatchEvent(new Event('input'));
+    }
+    updateTimelineWidth();
+    MusicMaker.updateCursor(0);
+    MusicMaker.updateCursorHeight();
+};
