@@ -5,6 +5,7 @@ class Playback {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.soundBuffer = null;
         this.instrumentBuffers = {};
+        this.baseNotes = {};
         this.isPlaying = false;
         this.startTime = 0;
         this.playbackPosition = 0;
@@ -29,6 +30,7 @@ class Playback {
 
         this.loadSound('sound.ogg').then(buffer => this.soundBuffer = buffer);
         this.loadAllInstrumentSounds();
+        this.loadBaseNotes();
     }
 
     setVolume(volume) {
@@ -60,17 +62,16 @@ class Playback {
         }
     }
 
-    noteToMidi(noteName) {
-        const noteOffsetMap = {
-            'F#': 0, 'F': -1, 'E': -2, 'D#': -3, 'D': -4, 'C#': -5, 'C': -6, 'B': -7, 'A#': -8, 'A': -9, 'G#': -10, 'G': -11, 'LF#': -12
-        };
-        const octaveName = noteName.replace(/[^0-9]/g, '');
-        let octave = parseInt(octaveName, 10);
-        let key = noteName.slice(0, -octaveName.length);
+    async loadBaseNotes() {
+        try {
+            const response = await fetch('js/base-notes.json');
+            this.baseNotes = await response.json();
+        } catch (error) {
+        }
+    }
 
-        const baseMidiFsharp0 = 18;
-        const midi = baseMidiFsharp0 + octave * 12 + noteOffsetMap[key];
-        return midi;
+    noteToMidi(noteName) {
+        return MusicMaker.noteNameToMidi(noteName);
     }
 
 
@@ -104,14 +105,15 @@ class Playback {
 
         MusicMaker.state.tracks.forEach(note => {
             const instrumentName = note.instrumentName;
-            const noteSize = MusicMaker.getNoteSize(note);
+            const noteSize = MusicMaker.getNoteSize(note.pitch, instrumentName);
             let buffer = this.soundBuffer;
             let baseNote = 'F#3';
 
             if (this.instrumentBuffers[instrumentName] && this.instrumentBuffers[instrumentName][noteSize]) {
                 buffer = this.instrumentBuffers[instrumentName][noteSize];
-                const octave = parseInt(note.pitch.replace(/[^0-9]/g, ''), 10);
-                baseNote = `F#${octave}`;
+                if (this.baseNotes[instrumentName] && this.baseNotes[instrumentName][noteSize]) {
+                    baseNote = this.baseNotes[instrumentName][noteSize];
+                }
             }
 
             if (!buffer) {
@@ -143,14 +145,15 @@ class Playback {
                 harmonics.forEach(harmonic => {
                     const harmonicNote = { ...note, instrumentName: harmonic.instrumentName, pitch: harmonic.pitch };
                     const harmonicInstrumentName = harmonicNote.instrumentName;
-                    const harmonicNoteSize = MusicMaker.getNoteSize(harmonicNote);
+                    const harmonicNoteSize = MusicMaker.getNoteSize(harmonicNote.pitch, harmonicInstrumentName);
                     let harmonicBuffer = this.soundBuffer;
                     let harmonicBaseNote = 'F#3';
 
                     if (this.instrumentBuffers[harmonicInstrumentName] && this.instrumentBuffers[harmonicInstrumentName][harmonicNoteSize]) {
                         harmonicBuffer = this.instrumentBuffers[harmonicInstrumentName][harmonicNoteSize];
-                        const harmonicOctave = parseInt(harmonicNote.pitch.replace(/[^0-9]/g, ''), 10);
-                        harmonicBaseNote = `F#${harmonicOctave}`;
+                        if (this.baseNotes[harmonicInstrumentName] && this.baseNotes[harmonicInstrumentName][harmonicNoteSize]) {
+                            harmonicBaseNote = this.baseNotes[harmonicInstrumentName][harmonicNoteSize];
+                        }
                     }
 
                     if (!harmonicBuffer) {

@@ -1,15 +1,24 @@
 var MusicMaker = MusicMaker || {};
 
 MusicMaker.noteNameToMidi = function(noteName) {
-    const noteOffsetMap = {
-        'F#': 0, 'F': -1, 'E': -2, 'D#': -3, 'D': -4, 'C#': -5, 'C': -6, 'B': -7, 'A#': -8, 'A': -9, 'G#': -10, 'G': -11, 'LF#': -12
+    const noteValues = {
+        'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11
     };
-    const octaveName = noteName.replace(/[^0-9]/g, '');
-    let octave = parseInt(octaveName, 10);
-    let key = noteName.slice(0, -octaveName.length);
 
-    const baseMidiFsharp0 = 18;
-    const midi = baseMidiFsharp0 + octave * 12 + noteOffsetMap[key];
+    const match = noteName.match(/([A-G]#?)(-?\d+)/);
+    if (!match) {
+        if (noteName === 'LF#') return 18;
+        return null;
+    }
+
+    const key = match[1];
+    const octave = parseInt(match[2], 10);
+
+    if (noteValues[key] === undefined) {
+        return null;
+    }
+
+    const midi = (octave + 1) * 12 + noteValues[key];
     return midi;
 };
 
@@ -20,12 +29,22 @@ MusicMaker.getNoteSize = function(pitch, instrumentName) {
     }
 
     const midi = MusicMaker.noteNameToMidi(pitch);
-    for (const size in instrument.sizeRanges) {
-        const range = instrument.sizeRanges[size];
-        if (midi >= range[0] && midi <= range[1]) {
-            return size;
+    const sizes = ['tiny', 'small', 'medium', 'large', 'huge'];
+
+    for (const size of sizes) {
+        if (instrument.sizeRanges[size]) {
+            const range = instrument.sizeRanges[size];
+            if (midi > range[0] && midi <= range[1]) {
+                return size;
+            }
         }
     }
+    
+    const hugeRange = instrument.sizeRanges['huge'];
+    if (hugeRange && midi === hugeRange[0]) {
+        return 'huge';
+    }
+
 
     return 'medium'; // Default size
 };

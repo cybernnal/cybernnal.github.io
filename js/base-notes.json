@@ -1,0 +1,68 @@
+{
+  "piccolo": {
+    "tiny": "F#7",
+    "small": "F#6",
+    "medium": "F#5",
+    "large": "F#4",
+    "huge": "F#3"
+  },
+  "gamba": {
+    "tiny": "F#6",
+    "small": "F#5",
+    "medium": "F#4",
+    "large": "F#3",
+    "huge": "F#2"
+  },
+  "diapason": {
+    "tiny": "F#5",
+    "small": "F#4",
+    "medium": "F#3",
+    "large": "F#2",
+    "huge": "F#1"
+  },
+  "trompette": {
+    "tiny": "F#5",
+    "small": "F#4",
+    "medium": "F#3",
+    "large": "F#2",
+    "huge": "F#1"
+  },
+  "vox humana": {
+    "tiny": "F#5",
+    "small": "F#4",
+    "medium": "F#3",
+    "large": "F#2",
+    "huge": "F#1"
+  },
+  "gedeckt": {
+    "tiny": "F#5",
+    "small": "F#4",
+    "medium": "F#3",
+    "large": "F#2",
+    "huge": "F#1"
+  },
+  "steam": {
+    "small": "F#4",
+    "medium": "F#3",
+    "large": "F#2"
+  },
+  "subbass": {
+    "small": "F#4",
+    "medium": "F#3",
+    "large": "F#2",
+    "huge": "F#1"
+  },
+  "posaune": {
+    "small": "F#3",
+    "medium": "F#2",
+    "large": "F#1",
+    "huge": "F#0"
+  },
+  "nasard": {
+    "tiny": "C#8",
+    "small": "C#7",
+    "medium": "C#6",
+    "large": "C#5",
+    "huge": "C#4"
+  }
+}
