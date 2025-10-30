@@ -310,7 +310,7 @@ MusicMaker.exportTracks = function(songData) {
     let result = '';
     exportParts.forEach((part, index) => {
         result += part + ' ';
-        if ((index + 1) % 8 === 0) {
+        if ((index + 1) % 16 === 0) {
             result += '\n';
         }
     });
