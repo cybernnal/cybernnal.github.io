@@ -900,6 +900,9 @@ MusicMaker.renderNote = function(note) {
                 } else {
                     const durationGridSizePixels = minNoteDuration * MusicMaker.state.stepWidth;
                     snappedWidth = Math.round(finalWidth / durationGridSizePixels) * durationGridSizePixels;
+                    if (snappedWidth === 0) {
+                        snappedWidth = durationGridSizePixels;
+                    }
                 }
 
                 noteElement.style.left = snappedLeft + 'px';

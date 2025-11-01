@@ -72,7 +72,7 @@ MusicMaker.parseAndLoadSong = function(content) {
     const allDurations = [];
     let currentTime = 0;
     let maxTime = 0;
-    const parts = content.replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/).filter(p => p);
+    const parts = content.trim().replace(/\r\n/g, ' ').replace(/\n/g, ' ').split(/\s+/).filter(p => p);
     const trackLayout = {};
 
     const customInstrumentExportNames = Object.values(MusicMaker.state.instruments)
@@ -107,7 +107,7 @@ MusicMaker.parseAndLoadSong = function(content) {
                 const pitchName = noteInfo.substring(customInstrumentExportName.length);
                 const instrumentName = exportNameToDisplayName[customInstrumentExportName];
                 
-                const fullPitchName = pitchName + '4'; // Assume octave 4
+                const fullPitchName = /\d$/.test(pitchName) ? pitchName : pitchName + '4';
 
                 const newNote = {
                     id: Date.now() + Math.random(),
@@ -206,6 +206,26 @@ MusicMaker.parseAndLoadSong = function(content) {
         }
     });
 
+    if (localTracks.length > 0) {
+        const firstNote = localTracks[0];
+        const grid = 0.25; // Standard grid unit
+        const originalStart = firstNote.start;
+        const snappedStart = Math.round(originalStart / grid) * grid;
+
+        const offset = snappedStart - originalStart;
+
+        if (Math.abs(offset) > 0.001) { // Only apply if offset is significant
+            localTracks.forEach(note => {
+                note.start += offset;
+                if (note.start < 0) {
+                    note.start = 0;
+                }
+            });
+            // Adjust totalTime as well
+            maxTime += offset;
+        }
+    }
+
     return { tracks: localTracks, totalTime: maxTime + 100, trackLayout: trackLayout, allDurations: allDurations };
 };
 MusicMaker.exportTracks = function(songData) {
@@ -276,8 +296,7 @@ MusicMaker.exportTracks = function(songData) {
                 if (isCustom) {
                     const instrumentCode = customInstrument.exportName;
                     if (instrumentCode) {
-                        const pitchName = note.pitch.replace(/\d+$/, ''); // Remove octave
-                        exportParts.push(`${instrumentCode}${pitchName},${Number(note.duration.toFixed(2))}`);
+                        exportParts.push(`${instrumentCode}${note.pitch},${Number(note.duration.toFixed(2))}`);
                     }
                 } else {
                     const size = MusicMaker.getNoteSize(note.pitch, note.instrumentName);
